@@ -88,25 +88,28 @@
       border: 1px solid rgba(255,255,255,0.04);
       font-size: 13px;
       line-height: 1.55;
-      white-space: pre-line;
+      white-space: normal;
     }
-    .legend {
+    .tooltip-time {
+      color: var(--text);
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .tooltip-list {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 8px;
-      margin-top: 10px;
+      gap: 6px;
     }
-    .legend-item {
+    .tooltip-row {
       display: flex;
       gap: 8px;
       align-items: center;
-      background: var(--panel2);
-      border: 1px solid rgba(255,255,255,0.04);
-      border-radius: 12px;
-      padding: 10px 12px;
-      font-size: 12px;
     }
-    .swatch { width: 10px; height: 10px; border-radius: 999px; flex: 0 0 10px; }
+    .tooltip-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      flex: 0 0 10px;
+    }
     .lock {
       position: fixed;
       inset: 0;
@@ -200,13 +203,22 @@
       <section class="panel">
         <div class="chart-head">
           <div>
+            <h2>Price</h2>
+            <div class="subtle" id="price-subtitle"></div>
+          </div>
+        </div>
+        <div class="canvas-wrap"><canvas id="price-chart"></canvas></div>
+      </section>
+
+      <section class="panel">
+        <div class="chart-head">
+          <div>
             <h2>Cumulative Funding Return</h2>
             <div class="subtle" id="cum-subtitle"></div>
           </div>
         </div>
         <div class="canvas-wrap"><canvas id="cum-chart"></canvas></div>
         <div id="tooltip" class="tooltip">Tap chart to inspect values.</div>
-        <div id="legend" class="legend"></div>
         <div id="empty-state" class="empty hidden">No visible data.</div>
       </section>
     </div>
@@ -236,7 +248,7 @@
       symbolFilter: new Set(),
       exchangeFilter: new Set(),
       pointer: null,
-      data: { records: [], lastUpdated: 0 }
+      data: { records: [], priceRecords: [], lastUpdated: 0 }
     };
 
     const el = {
@@ -253,12 +265,13 @@
       symbolFilters: document.getElementById("symbol-filters"),
       exchangeFilters: document.getElementById("exchange-filters"),
       metricChart: document.getElementById("metric-chart"),
+      priceChart: document.getElementById("price-chart"),
       cumChart: document.getElementById("cum-chart"),
       metricTitle: document.getElementById("metric-title"),
       metricSubtitle: document.getElementById("metric-subtitle"),
+      priceSubtitle: document.getElementById("price-subtitle"),
       cumSubtitle: document.getElementById("cum-subtitle"),
       tooltip: document.getElementById("tooltip"),
-      legend: document.getElementById("legend"),
       empty: document.getElementById("empty-state")
     };
 
@@ -287,6 +300,20 @@
     }
 
     function percent(v) { return `${(v * 100).toFixed(2)}%`; }
+    function formatPrice(v) {
+      if (!Number.isFinite(v)) return "-";
+      const abs = Math.abs(v);
+      const digits = abs >= 1000 ? 2 : abs >= 100 ? 3 : abs >= 1 ? 4 : 6;
+      return v.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: digits });
+    }
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll("\"", "&quot;")
+        .replaceAll("'", "&#39;");
+    }
 
     function metricValue(hourly, metric) {
       if (metric === "1h") return hourly;
@@ -330,8 +357,16 @@
       return Array.isArray(state.data.records) ? state.data.records : [];
     }
 
+    function priceRecords() {
+      return Array.isArray(state.data.priceRecords) ? state.data.priceRecords : [];
+    }
+
     function assetRecords() {
       return records().filter((row) => row.assetGroup === state.assetGroup).sort((a, b) => a.timestamp - b.timestamp);
+    }
+
+    function assetPriceRecords() {
+      return priceRecords().filter((row) => row.assetGroup === state.assetGroup).sort((a, b) => a.timestamp - b.timestamp);
     }
 
     function uniqueValues(rows, key) {
@@ -350,6 +385,12 @@
       ensureDefaults();
       const cutoff = state.rangeDays == null ? -Infinity : Date.now() - state.rangeDays * 24 * 3600 * 1000;
       return assetRecords().filter((row) => row.timestamp >= cutoff && state.symbolFilter.has(row.symbol) && state.exchangeFilter.has(row.exchange));
+    }
+
+    function visiblePriceRows() {
+      ensureDefaults();
+      const cutoff = state.rangeDays == null ? -Infinity : Date.now() - state.rangeDays * 24 * 3600 * 1000;
+      return assetPriceRecords().filter((row) => row.timestamp >= cutoff && state.symbolFilter.has(row.symbol));
     }
 
     function buildSeries(rows) {
@@ -373,6 +414,22 @@
         series.latestCum = series.cumulativePoints[series.cumulativePoints.length - 1] || null;
         return series;
       }).sort((a, b) => (b.latest?.metric ?? -Infinity) - (a.latest?.metric ?? -Infinity));
+    }
+
+    function buildPriceSeries(rows) {
+      const map = new Map();
+      rows.forEach((row) => {
+        if (!map.has(row.symbol)) {
+          map.set(row.symbol, { key: `price|${row.symbol}`, symbol: row.symbol, color: hashColor(`price|${row.symbol}`), points: [] });
+        }
+        const series = map.get(row.symbol);
+        series.points.push({ x: row.timestamp, y: row.price });
+      });
+      return [...map.values()].map((series) => {
+        series.points.sort((a, b) => a.x - b.x);
+        series.latest = series.points[series.points.length - 1] || null;
+        return series;
+      }).sort((a, b) => (b.latest?.y ?? -Infinity) - (a.latest?.y ?? -Infinity));
     }
 
     function renderButtons(container, items, getLabel, isActive, onClick) {
@@ -423,17 +480,7 @@
       el.stats.innerHTML = cards.map((card) => `<div class="stat"><span class="label">${card.label}</span><span class="value">${card.value}</span></div>`).join("");
     }
 
-    function renderLegend(seriesList) {
-      el.legend.innerHTML = "";
-      seriesList.forEach((series) => {
-        const item = document.createElement("div");
-        item.className = "legend-item";
-        item.innerHTML = `<span class="swatch" style="background:${series.color}"></span><span>${series.exchange} / ${series.symbol} / ${state.metric.toUpperCase()} ${percent(series.latest?.metric ?? 0)} / Cum ${percent(series.latestCum?.y ?? 0)}</span>`;
-        el.legend.appendChild(item);
-      });
-    }
-
-    function drawChart(canvas, seriesList, pointSelector, pointerSelector) {
+    function drawChart(canvas, seriesList, pointSelector, pointerSelector, options = {}) {
       const points = seriesList.flatMap((series) => pointSelector(series));
       const rect = canvas.getBoundingClientRect();
       const dpr = window.devicePixelRatio || 1;
@@ -470,6 +517,7 @@
       ctx.lineWidth = 1;
       ctx.strokeStyle = "rgba(255,255,255,0.08)";
       ctx.fillStyle = "rgba(255,255,255,0.45)";
+      const formatY = options.formatY || percent;
       for (let i = 0; i <= 4; i += 1) {
         const ratio = i / 4;
         const yValue = yMax - (yMax - yMin) * ratio;
@@ -478,7 +526,7 @@
         ctx.moveTo(margin.left, y);
         ctx.lineTo(width - margin.right, y);
         ctx.stroke();
-        ctx.fillText(percent(yValue), 8, y + 4);
+        ctx.fillText(formatY(yValue), 8, y + 4);
       }
       for (let i = 0; i <= 4; i += 1) {
         const ratio = i / 4;
@@ -490,7 +538,7 @@
         ctx.stroke();
         ctx.fillText(formatAxisDate(xValue), x - 18, height - 10);
       }
-      if (yMin < 0 && yMax > 0) {
+      if (options.zeroLine !== false && yMin < 0 && yMax > 0) {
         const zeroY = toY(0);
         ctx.strokeStyle = "rgba(86,211,100,0.28)";
         ctx.beginPath();
@@ -526,7 +574,7 @@
       }
     }
 
-    function nearestPointer(seriesList, canvas, clientX) {
+    function nearestFundingPointer(seriesList, canvas, clientX) {
       const rect = canvas.getBoundingClientRect();
       const width = Math.max(320, Math.floor(rect.width));
       const margin = { left: 82, right: 14 };
@@ -547,16 +595,45 @@
           if (d < dist) { dist = d; nearestIndex = idx; }
         });
         rows.push({
-          exchange: series.exchange,
-          symbol: series.symbol,
-          metric: series.points[nearestIndex]?.metric ?? 0,
-          cumulative: series.cumulativePoints[nearestIndex]?.y ?? 0,
+          label: `${series.exchange} / ${series.symbol} / ${state.metric.toUpperCase()} ${percent(series.points[nearestIndex]?.metric ?? 0)} / Cum ${percent(series.cumulativePoints[nearestIndex]?.y ?? 0)}`,
+          sortValue: series.points[nearestIndex]?.metric ?? 0,
           timestamp: series.points[nearestIndex]?.x ?? targetTs,
           color: series.color
         });
       });
       const timestamps = rows.map((r) => r.timestamp).sort((a, b) => a - b);
-      return { timestamp: timestamps[Math.floor(timestamps.length / 2)], rows };
+      return { timestamp: timestamps[Math.floor(timestamps.length / 2)], rows, kind: "funding" };
+    }
+
+    function nearestPricePointer(seriesList, canvas, clientX) {
+      const rect = canvas.getBoundingClientRect();
+      const width = Math.max(320, Math.floor(rect.width));
+      const margin = { left: 82, right: 14 };
+      const innerWidth = width - margin.left - margin.right;
+      const points = seriesList.flatMap((series) => series.points);
+      if (!points.length) return null;
+      const xMin = Math.min(...points.map((p) => p.x));
+      const xMax = Math.max(...points.map((p) => p.x));
+      const offsetX = clientX - rect.left;
+      const clamped = Math.min(Math.max(offsetX, margin.left), width - margin.right);
+      const targetTs = xMin + ((clamped - margin.left) / innerWidth) * (xMax - xMin);
+      const rows = [];
+      seriesList.forEach((series) => {
+        let nearestIndex = 0;
+        let dist = Infinity;
+        series.points.forEach((point, idx) => {
+          const d = Math.abs(point.x - targetTs);
+          if (d < dist) { dist = d; nearestIndex = idx; }
+        });
+        rows.push({
+          label: `${series.symbol} / Price ${formatPrice(series.points[nearestIndex]?.y ?? 0)}`,
+          sortValue: series.points[nearestIndex]?.y ?? 0,
+          timestamp: series.points[nearestIndex]?.x ?? targetTs,
+          color: series.color
+        });
+      });
+      const timestamps = rows.map((r) => r.timestamp).sort((a, b) => a - b);
+      return { timestamp: timestamps[Math.floor(timestamps.length / 2)], rows, kind: "price" };
     }
 
     function updateTooltip(pointer) {
@@ -564,11 +641,11 @@
         el.tooltip.textContent = "Tap chart to inspect values.";
         return;
       }
-      const lines = [formatDateTime(pointer.timestamp)];
-      pointer.rows.sort((a, b) => b.metric - a.metric).forEach((row) => {
-        lines.push(`${row.exchange} / ${row.symbol} / ${state.metric.toUpperCase()} ${percent(row.metric)} / Cum ${percent(row.cumulative)}`);
-      });
-      el.tooltip.textContent = lines.join("\n");
+      const rows = [...pointer.rows].sort((a, b) => b.sortValue - a.sortValue);
+      const body = rows
+        .map((row) => `<div class="tooltip-row"><span class="tooltip-dot" style="background:${row.color}"></span><span>${escapeHtml(row.label)}</span></div>`)
+        .join("");
+      el.tooltip.innerHTML = `<div class="tooltip-time">${formatDateTime(pointer.timestamp)}</div><div class="tooltip-list">${body}</div>`;
     }
 
     function render() {
@@ -576,11 +653,12 @@
       renderFilters();
       const rows = visibleRows();
       const seriesList = buildSeries(rows);
+      const priceSeriesList = buildPriceSeries(visiblePriceRows());
       renderStats(seriesList);
-      renderLegend(seriesList);
       el.updated.textContent = state.data.lastUpdated ? `Updated ${formatDateTime(state.data.lastUpdated)}` : "Updated -";
       el.metricTitle.textContent = `${state.metric.toUpperCase()} Chart`;
       el.metricSubtitle.textContent = `${ASSET_LABELS[state.assetGroup]} / ${state.rangeDays == null ? "ALL" : `${state.rangeDays}D`} / ${state.metric.toUpperCase()}`;
+      el.priceSubtitle.textContent = `${ASSET_LABELS[state.assetGroup]} / ${state.rangeDays == null ? "ALL" : `${state.rangeDays}D`} / Lighter mark price`;
       el.cumSubtitle.textContent = `${ASSET_LABELS[state.assetGroup]} / ${state.rangeDays == null ? "ALL" : `${state.rangeDays}D`}`;
       if (seriesList.length === 0) el.empty.classList.remove("hidden"); else el.empty.classList.add("hidden");
 
@@ -590,6 +668,13 @@
         series.points.forEach((p) => { const d = Math.abs(p.x - timestamp); if (d < dist) { dist = d; nearest = { y: p.metric }; } });
         return { color: series.color, y: nearest.y };
       }));
+
+      drawChart(el.priceChart, priceSeriesList, (series) => series.points, (timestamp) => priceSeriesList.map((series) => {
+        let nearest = { y: 0 };
+        let dist = Infinity;
+        series.points.forEach((p) => { const d = Math.abs(p.x - timestamp); if (d < dist) { dist = d; nearest = p; } });
+        return { color: series.color, y: nearest.y };
+      }), { formatY: formatPrice, zeroLine: false });
 
       drawChart(el.cumChart, seriesList, (series) => series.cumulativePoints, (timestamp) => seriesList.map((series) => {
         let nearest = { y: 0 };
@@ -602,20 +687,21 @@
     }
 
     function initEvents() {
-      [el.metricChart, el.cumChart].forEach((canvas) => {
+      const bindPointer = (canvas, resolver) => {
         canvas.addEventListener("click", (event) => {
-          const seriesList = buildSeries(visibleRows());
-          state.pointer = nearestPointer(seriesList, canvas, event.clientX);
+          state.pointer = resolver(canvas, event.clientX);
           render();
         });
         canvas.addEventListener("touchstart", (event) => {
           const touch = event.touches[0];
           if (!touch) return;
-          const seriesList = buildSeries(visibleRows());
-          state.pointer = nearestPointer(seriesList, canvas, touch.clientX);
+          state.pointer = resolver(canvas, touch.clientX);
           render();
         }, { passive: true });
-      });
+      };
+      bindPointer(el.metricChart, (canvas, clientX) => nearestFundingPointer(buildSeries(visibleRows()), canvas, clientX));
+      bindPointer(el.cumChart, (canvas, clientX) => nearestFundingPointer(buildSeries(visibleRows()), canvas, clientX));
+      bindPointer(el.priceChart, (canvas, clientX) => nearestPricePointer(buildPriceSeries(visiblePriceRows()), canvas, clientX));
       window.addEventListener("resize", () => { if (!el.appShell.classList.contains("hidden")) render(); });
       el.unlockButton.addEventListener("click", () => unlock().catch((err) => { el.lockError.textContent = `Load failed: ${err.message}`; }));
       el.passcodeInput.addEventListener("keydown", (event) => {

@@ -163,6 +163,24 @@ def build_record(
     }
 
 
+def build_price_record(
+    source_exchange: str,
+    symbol: str,
+    price: float,
+    timestamp_ms: int,
+) -> dict[str, Any] | None:
+    asset_group = detect_asset_group(symbol)
+    if not asset_group or price <= 0:
+        return None
+    return {
+        "sourceExchange": source_exchange,
+        "symbol": symbol,
+        "assetGroup": asset_group,
+        "price": float(price),
+        "timestamp": int(timestamp_ms),
+    }
+
+
 def compact_record(record: dict[str, Any]) -> dict[str, Any]:
     return {
         "exchange": record["exchange"],
@@ -171,6 +189,16 @@ def compact_record(record: dict[str, Any]) -> dict[str, Any]:
         "fundingRate": round(float(record["fundingRate"]), 12),
         "fundingIntervalHours": round(float(record["fundingIntervalHours"]), 6),
         "fundingRateHourly": round(float(record["fundingRateHourly"]), 12),
+        "timestamp": int(record["timestamp"]),
+    }
+
+
+def compact_price_record(record: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "sourceExchange": record["sourceExchange"],
+        "symbol": record["symbol"],
+        "assetGroup": record["assetGroup"],
+        "price": round(float(record["price"]), 10),
         "timestamp": int(record["timestamp"]),
     }
 
@@ -200,17 +228,25 @@ def load_existing_dataset() -> dict[str, Any]:
             data = json.loads(CACHE_JSON_PATH.read_text(encoding="utf-8"))
             if isinstance(data.get("records"), list):
                 logger.info("既存キャッシュを読み込みました: {}", CACHE_JSON_PATH)
-                return {"records": data.get("records", []), "lastUpdated": to_int(data.get("lastUpdated"), 0)}
+                return {
+                    "records": data.get("records", []),
+                    "priceRecords": data.get("priceRecords", []),
+                    "lastUpdated": to_int(data.get("lastUpdated"), 0),
+                }
         except Exception as exc:
             logger.error("キャッシュ読み込み失敗: {}", exc)
 
     html_data = load_dataset_from_html(OUTPUT_HTML_PATH)
     if html_data.get("records"):
         logger.info("index.html 内の埋め込みデータを再利用します")
-        return {"records": html_data.get("records", []), "lastUpdated": to_int(html_data.get("lastUpdated"), 0)}
+        return {
+            "records": html_data.get("records", []),
+            "priceRecords": html_data.get("priceRecords", []),
+            "lastUpdated": to_int(html_data.get("lastUpdated"), 0),
+        }
 
     logger.info("既存データがないため、新規作成します")
-    return {"records": [], "lastUpdated": 0}
+    return {"records": [], "priceRecords": [], "lastUpdated": 0}
 
 
 def save_dataset_json(dataset: dict[str, Any]) -> None:
@@ -251,6 +287,39 @@ def compress_records(records: list[dict[str, Any]], now_ms: int) -> list[dict[st
 
     result = sorted(compressed, key=lambda row: (row["assetGroup"], row["symbol"], row["exchange"], row["timestamp"]))
     logger.info("履歴圧縮結果: {} -> {} 件", len(records), len(result))
+    return result
+
+
+def compress_price_records(records: list[dict[str, Any]], now_ms: int) -> list[dict[str, Any]]:
+    compressed: list[dict[str, Any]] = []
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in records:
+        grouped[row["symbol"]].append(row)
+
+    for _, rows in grouped.items():
+        rows.sort(key=lambda item: item["timestamp"])
+        bucket_latest: dict[int, dict[str, Any]] = {}
+        for row in rows:
+            age_days = (now_ms - int(row["timestamp"])) / 86_400_000
+            if age_days <= 30:
+                bucket_ms = 0
+            elif age_days <= 180:
+                bucket_ms = 4 * 3_600_000
+            else:
+                bucket_ms = 24 * 3_600_000
+
+            if bucket_ms == 0:
+                compressed.append(compact_price_record(row))
+                continue
+
+            bucket_key = int(row["timestamp"]) // bucket_ms
+            bucket_latest[bucket_key] = compact_price_record(row)
+
+        if bucket_latest:
+            compressed.extend(sorted(bucket_latest.values(), key=lambda item: item["timestamp"]))
+
+    result = sorted(compressed, key=lambda row: (row["assetGroup"], row["symbol"], row["timestamp"]))
+    logger.info("価格履歴圧縮結果: {} -> {} 件", len(records), len(result))
     return result
 
 
@@ -540,6 +609,41 @@ def fetch_lighter_history_from_local(start_ms: int) -> list[dict[str, Any]]:
     return results
 
 
+def fetch_price_history_from_lighter_market_stats(start_ms: int) -> list[dict[str, Any]]:
+    target_symbols = {"BTC", "ETH", "SOL", "PAXG", "XAU", "WTI", "BRENTOIL", "XAG"}
+    latest_by_bucket: dict[tuple[str, int], dict[str, Any]] = {}
+    files = iter_raw_files(LIGHTER_MARKET_STATS_RAW_DIR, start_ms)
+    logger.info("Lighter price raw 走査開始: files={}", len(files))
+    for path in files:
+        with open_text_file(path) as fp:
+            for line in fp:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    row = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                ts_ms = iso_to_unix_ms(str(row.get("timestamp_utc")))
+                if start_ms and ts_ms <= start_ms:
+                    continue
+                hour_bucket_ms = (ts_ms // 3_600_000) * 3_600_000
+                for symbol, entry in (row.get("data") or {}).items():
+                    if symbol not in target_symbols:
+                        continue
+                    price = to_float(entry.get("mark_price"))
+                    if price <= 0:
+                        price = to_float(entry.get("index_price"))
+                    if price <= 0:
+                        price = to_float(entry.get("last_trade_price"))
+                    record = build_price_record("Lighter", symbol, price, hour_bucket_ms)
+                    if record:
+                        latest_by_bucket[(symbol, hour_bucket_ms)] = record
+    results = sorted(latest_by_bucket.values(), key=lambda row: (row["symbol"], row["timestamp"]))
+    logger.success("Lighter price raw 取り込み成功: {} 件", len(results))
+    return results
+
+
 def collect_backfill_records(existing_records: list[dict[str, Any]], session: requests.Session) -> list[dict[str, Any]]:
     backfill: list[dict[str, Any]] = []
 
@@ -726,9 +830,11 @@ def main() -> int:
 
     incremental_records = collect_incremental_records(existing_dataset["records"], session)
     merged_records = merge_records(existing_dataset["records"], incremental_records)
-    merged_records = compress_records(merged_records, int(time.time() * 1000))
+    now_ms = int(time.time() * 1000)
+    merged_records = compress_records(merged_records, now_ms)
+    price_records = compress_price_records(fetch_price_history_from_lighter_market_stats(BOOTSTRAP_START_MS), now_ms)
 
-    dataset = {"records": merged_records, "lastUpdated": int(time.time() * 1000)}
+    dataset = {"records": merged_records, "priceRecords": price_records, "lastUpdated": now_ms}
     save_dataset_json(dataset)
     web_dataset_json = json.dumps(dataset, ensure_ascii=False, separators=(",", ":"))
     ROOT_DATA_JSON_PATH.write_text(web_dataset_json, encoding="utf-8")
