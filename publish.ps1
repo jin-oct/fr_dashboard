@@ -3,7 +3,7 @@ $ErrorActionPreference = "Stop"
 Set-Location "D:\CODEX\DASHBOARD"
 
 $git = "C:\Program Files\Git\cmd\git.exe"
-$python = "python"
+$python = "C:\Users\Administrator\AppData\Local\Programs\Python\Python312\python.exe"
 $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
 
 Write-Output "[$timestamp] generate start"
