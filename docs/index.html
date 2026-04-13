@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Funding Dashboard</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --panel: #111827;
+      --panel2: #161b22;
+      --text: #c9d1d9;
+      --muted: #8b949e;
+      --accent: #2ea043;
+      --danger: #f85149;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top right, rgba(46,160,67,0.15), transparent 30%),
+        radial-gradient(circle at top left, rgba(210,153,34,0.08), transparent 26%),
+        var(--bg);
+      font-family: "Segoe UI", sans-serif;
+    }
+    .hidden { display: none !important; }
+    .wrap { width: min(1180px, calc(100vw - 16px)); margin: 0 auto; padding: 10px 0 24px; }
+    .panel {
+      background: linear-gradient(180deg, rgba(255,255,255,0.03), transparent), var(--panel);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 18px;
+      padding: 14px;
+      margin-bottom: 12px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.25);
+    }
+    .title, .toolbar, .stats, .filters, .chart-head {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .chips, .stats, .filters { display: flex; flex-wrap: wrap; gap: 8px; }
+    h1 { margin: 0; font-size: 22px; }
+    h2 { margin: 0; font-size: 15px; }
+    .subtle, .meta { color: var(--muted); font-size: 12px; }
+    .filter-box, .stat {
+      flex: 1 1 220px;
+      min-width: 0;
+      background: var(--panel2);
+      border: 1px solid rgba(255,255,255,0.04);
+      border-radius: 14px;
+      padding: 12px;
+    }
+    .stat .label { display: block; color: var(--muted); font-size: 12px; margin-bottom: 6px; }
+    .stat .value { font-size: 18px; font-weight: 700; line-height: 1.35; }
+    button {
+      border: 1px solid rgba(255,255,255,0.08);
+      background: #1c2128;
+      color: var(--text);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    button.active {
+      background: rgba(46,160,67,0.18);
+      border-color: rgba(86,211,100,0.55);
+      color: #effff2;
+    }
+    .canvas-wrap {
+      position: relative;
+      width: 100%;
+      min-height: 300px;
+      aspect-ratio: 16 / 8;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.05);
+      overflow: hidden;
+      background: linear-gradient(180deg, rgba(255,255,255,0.015), rgba(255,255,255,0.005));
+    }
+    canvas { width: 100%; height: 100%; display: block; }
+    .tooltip, .empty {
+      margin-top: 10px;
+      padding: 12px;
+      border-radius: 14px;
+      background: var(--panel2);
+      border: 1px solid rgba(255,255,255,0.04);
+      font-size: 13px;
+      line-height: 1.55;
+      white-space: pre-line;
+    }
+    .legend {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .legend-item {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      background: var(--panel2);
+      border: 1px solid rgba(255,255,255,0.04);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 12px;
+    }
+    .swatch { width: 10px; height: 10px; border-radius: 999px; flex: 0 0 10px; }
+    .lock {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      background: rgba(13,17,23,0.96);
+      z-index: 1000;
+    }
+    .lock-card {
+      width: min(420px, 100%);
+      padding: 20px;
+      border-radius: 18px;
+      background: var(--panel);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .lock-card h2 { margin: 0 0 8px; font-size: 18px; }
+    .lock-card p { margin: 0 0 14px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+    .lock-input {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: var(--panel2);
+      color: var(--text);
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+    .error { color: var(--danger); font-size: 12px; min-height: 18px; margin-top: 8px; }
+    @media (max-width: 720px) {
+      .wrap { width: min(100vw - 10px, 1180px); }
+      h1 { font-size: 18px; }
+      .toolbar { align-items: stretch; }
+      .canvas-wrap { aspect-ratio: 1.06 / 1; min-height: 320px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="lock-screen" class="lock">
+    <div class="lock-card">
+      <h2>Protected Dashboard</h2>
+      <p>Enter passcode to unlock.</p>
+      <input id="passcode-input" class="lock-input" type="password" inputmode="numeric" autocomplete="off" placeholder="Passcode">
+      <button id="unlock-button" class="active">Unlock</button>
+      <div id="lock-error" class="error"></div>
+    </div>
+  </div>
+
+  <div id="app-shell" class="hidden">
+    <div class="wrap">
+      <section class="panel">
+        <div class="title">
+          <div>
+            <h1>Funding Dashboard</h1>
+            <div class="subtle">GitHub Pages build with separate data file and metric toggle.</div>
+          </div>
+          <div class="meta" id="updated-label"></div>
+        </div>
+        <div class="toolbar">
+          <div class="chips" id="asset-tabs"></div>
+          <div class="chips" id="range-tabs"></div>
+          <div class="chips" id="metric-tabs"></div>
+        </div>
+        <div class="stats" id="stats"></div>
+      </section>
+
+      <section class="panel">
+        <div class="filters">
+          <div class="filter-box">
+            <div class="meta">Symbols</div>
+            <div class="chips" id="symbol-filters"></div>
+          </div>
+          <div class="filter-box">
+            <div class="meta">Exchanges</div>
+            <div class="chips" id="exchange-filters"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="chart-head">
+          <div>
+            <h2 id="metric-title">Metric Chart</h2>
+            <div class="subtle" id="metric-subtitle"></div>
+          </div>
+        </div>
+        <div class="canvas-wrap"><canvas id="metric-chart"></canvas></div>
+      </section>
+
+      <section class="panel">
+        <div class="chart-head">
+          <div>
+            <h2>Cumulative Funding Return</h2>
+            <div class="subtle" id="cum-subtitle"></div>
+          </div>
+        </div>
+        <div class="canvas-wrap"><canvas id="cum-chart"></canvas></div>
+        <div id="tooltip" class="tooltip">Tap chart to inspect values.</div>
+        <div id="legend" class="legend"></div>
+        <div id="empty-state" class="empty hidden">No visible data.</div>
+      </section>
+    </div>
+  </div>
+
+  <script id="inline-data-json" type="application/json">null</script>
+  <script>
+    const TARGET_EXCHANGES = ["Bitget", "Hyperliquid", "Aster", "edgeX", "Lighter", "StandX", "Pacifica"];
+    const PASSCODE_SHA256 = "0f179fbfd346fdd67b2f7276afcef7e3b617e71e86088ae47bc5cec86d9e5594";
+    const ASSET_LABELS = { gold: "Gold", oil: "Oil", btc: "BTC", eth: "ETH", sol: "SOL", xag: "XAG" };
+    const RANGE_OPTIONS = [
+      { label: "7D", days: 7 },
+      { label: "30D", days: 30 },
+      { label: "90D", days: 90 },
+      { label: "180D", days: 180 },
+      { label: "365D", days: 365 },
+      { label: "ALL", days: null }
+    ];
+    const METRIC_OPTIONS = ["1h", "8h", "24h", "apr", "apy"];
+    const COLORS = ["#2ea043","#d29922","#58a6ff","#f85149","#a371f7","#3fb950","#ff7b72","#79c0ff","#ffa657","#7ee787","#c69026","#bc8cff"];
+    const YEAR_HOURS = 24 * 365;
+
+    const state = {
+      assetGroup: "gold",
+      rangeDays: 365,
+      metric: "apy",
+      symbolFilter: new Set(),
+      exchangeFilter: new Set(),
+      pointer: null,
+      data: { records: [], lastUpdated: 0 }
+    };
+
+    const el = {
+      lockScreen: document.getElementById("lock-screen"),
+      passcodeInput: document.getElementById("passcode-input"),
+      unlockButton: document.getElementById("unlock-button"),
+      lockError: document.getElementById("lock-error"),
+      appShell: document.getElementById("app-shell"),
+      updated: document.getElementById("updated-label"),
+      assetTabs: document.getElementById("asset-tabs"),
+      rangeTabs: document.getElementById("range-tabs"),
+      metricTabs: document.getElementById("metric-tabs"),
+      stats: document.getElementById("stats"),
+      symbolFilters: document.getElementById("symbol-filters"),
+      exchangeFilters: document.getElementById("exchange-filters"),
+      metricChart: document.getElementById("metric-chart"),
+      cumChart: document.getElementById("cum-chart"),
+      metricTitle: document.getElementById("metric-title"),
+      metricSubtitle: document.getElementById("metric-subtitle"),
+      cumSubtitle: document.getElementById("cum-subtitle"),
+      tooltip: document.getElementById("tooltip"),
+      legend: document.getElementById("legend"),
+      empty: document.getElementById("empty-state")
+    };
+
+    function getInlineData() {
+      const raw = document.getElementById("inline-data-json").textContent.trim();
+      if (!raw || raw === "null") return null;
+      try { return JSON.parse(raw); } catch { return null; }
+    }
+
+    function hashColor(key) {
+      let hash = 0;
+      for (let i = 0; i < key.length; i += 1) {
+        hash = ((hash << 5) - hash) + key.charCodeAt(i);
+        hash |= 0;
+      }
+      return COLORS[Math.abs(hash) % COLORS.length];
+    }
+
+    function formatDateTime(ts) {
+      return new Date(ts).toLocaleString("ja-JP", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+    }
+
+    function formatAxisDate(ts) {
+      if (state.rangeDays && state.rangeDays <= 7) return new Date(ts).toLocaleString("ja-JP", { month: "2-digit", day: "2-digit", hour: "2-digit" });
+      return new Date(ts).toLocaleString("ja-JP", { month: "2-digit", day: "2-digit" });
+    }
+
+    function percent(v) { return `${(v * 100).toFixed(2)}%`; }
+
+    function metricValue(hourly, metric) {
+      if (metric === "1h") return hourly;
+      if (metric === "8h") return Math.pow(1 + hourly, 8) - 1;
+      if (metric === "24h") return Math.pow(1 + hourly, 24) - 1;
+      if (metric === "apr") return hourly * YEAR_HOURS;
+      return Math.pow(1 + hourly, YEAR_HOURS) - 1;
+    }
+
+    function sha256Hex(text) {
+      return crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)).then((digest) =>
+        [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("")
+      );
+    }
+
+    async function unlock() {
+      const hashed = await sha256Hex(el.passcodeInput.value || "");
+      if (hashed !== PASSCODE_SHA256) {
+        el.lockError.textContent = "Wrong passcode.";
+        return;
+      }
+      sessionStorage.setItem("fr_dashboard_unlocked", "1");
+      el.lockScreen.classList.add("hidden");
+      el.appShell.classList.remove("hidden");
+      await loadData();
+      render();
+    }
+
+    async function loadData() {
+      const inlineData = getInlineData();
+      if (inlineData) {
+        state.data = inlineData;
+        return;
+      }
+      const res = await fetch("./data.json", { cache: "no-store" });
+      if (!res.ok) throw new Error(`data.json load failed: ${res.status}`);
+      state.data = await res.json();
+    }
+
+    function records() {
+      return Array.isArray(state.data.records) ? state.data.records : [];
+    }
+
+    function assetRecords() {
+      return records().filter((row) => row.assetGroup === state.assetGroup).sort((a, b) => a.timestamp - b.timestamp);
+    }
+
+    function uniqueValues(rows, key) {
+      return [...new Set(rows.map((row) => row[key]))].sort((a, b) => String(a).localeCompare(String(b)));
+    }
+
+    function ensureDefaults() {
+      const rows = assetRecords();
+      const symbols = uniqueValues(rows, "symbol");
+      const exchanges = TARGET_EXCHANGES.filter((name) => rows.some((row) => row.exchange === name));
+      if (!state.symbolFilter.size || [...state.symbolFilter].every((v) => !symbols.includes(v))) state.symbolFilter = new Set(symbols);
+      if (!state.exchangeFilter.size || [...state.exchangeFilter].every((v) => !exchanges.includes(v))) state.exchangeFilter = new Set(exchanges);
+    }
+
+    function visibleRows() {
+      ensureDefaults();
+      const cutoff = state.rangeDays == null ? -Infinity : Date.now() - state.rangeDays * 24 * 3600 * 1000;
+      return assetRecords().filter((row) => row.timestamp >= cutoff && state.symbolFilter.has(row.symbol) && state.exchangeFilter.has(row.exchange));
+    }
+
+    function buildSeries(rows) {
+      const map = new Map();
+      rows.forEach((row) => {
+        const key = `${row.exchange}|${row.symbol}`;
+        if (!map.has(key)) {
+          map.set(key, { key, exchange: row.exchange, symbol: row.symbol, color: hashColor(key), points: [], cumulativePoints: [] });
+        }
+        const series = map.get(key);
+        series.points.push({ x: row.timestamp, metric: metricValue(row.fundingRateHourly, state.metric), raw: row.fundingRate });
+      });
+      return [...map.values()].map((series) => {
+        series.points.sort((a, b) => a.x - b.x);
+        let equity = 1;
+        series.points.forEach((point) => {
+          equity *= (1 + point.raw);
+          series.cumulativePoints.push({ x: point.x, y: equity - 1 });
+        });
+        series.latest = series.points[series.points.length - 1] || null;
+        series.latestCum = series.cumulativePoints[series.cumulativePoints.length - 1] || null;
+        return series;
+      }).sort((a, b) => (b.latest?.metric ?? -Infinity) - (a.latest?.metric ?? -Infinity));
+    }
+
+    function renderButtons(container, items, getLabel, isActive, onClick) {
+      container.innerHTML = "";
+      items.forEach((item) => {
+        const button = document.createElement("button");
+        button.textContent = getLabel(item);
+        if (isActive(item)) button.classList.add("active");
+        button.addEventListener("click", () => onClick(item));
+        container.appendChild(button);
+      });
+    }
+
+    function renderTabs() {
+      renderButtons(el.assetTabs, ["gold","oil","btc","eth","sol","xag"], (x) => ASSET_LABELS[x], (x) => state.assetGroup === x, (x) => { state.assetGroup = x; state.pointer = null; render(); });
+      renderButtons(el.rangeTabs, RANGE_OPTIONS, (x) => x.label, (x) => state.rangeDays === x.days, (x) => { state.rangeDays = x.days; state.pointer = null; render(); });
+      renderButtons(el.metricTabs, METRIC_OPTIONS, (x) => x.toUpperCase(), (x) => state.metric === x, (x) => { state.metric = x; state.pointer = null; render(); });
+    }
+
+    function renderFilters() {
+      const rows = assetRecords();
+      const symbols = uniqueValues(rows, "symbol");
+      const exchanges = TARGET_EXCHANGES.filter((name) => rows.some((row) => row.exchange === name));
+      renderButtons(el.symbolFilters, symbols, (x) => x, (x) => state.symbolFilter.has(x), (x) => {
+        if (state.symbolFilter.has(x) && state.symbolFilter.size > 1) state.symbolFilter.delete(x); else state.symbolFilter.add(x);
+        state.pointer = null;
+        render();
+      });
+      renderButtons(el.exchangeFilters, exchanges, (x) => x, (x) => state.exchangeFilter.has(x), (x) => {
+        if (state.exchangeFilter.has(x) && state.exchangeFilter.size > 1) state.exchangeFilter.delete(x); else state.exchangeFilter.add(x);
+        state.pointer = null;
+        render();
+      });
+    }
+
+    function renderStats(seriesList) {
+      const ranked = seriesList.filter((s) => s.latest).slice().sort((a, b) => b.latest.metric - a.latest.metric);
+      const top = ranked[0];
+      const bottom = ranked[ranked.length - 1];
+      const bestCum = seriesList.filter((s) => s.latestCum).slice().sort((a, b) => (b.latestCum?.y ?? -Infinity) - (a.latestCum?.y ?? -Infinity))[0];
+      const cards = [
+        { label: "Visible Series", value: `${seriesList.length}` },
+        { label: "Visible Records", value: `${visibleRows().length}` },
+        { label: `Top ${state.metric.toUpperCase()}`, value: top ? `${top.exchange} ${top.symbol} ${percent(top.latest.metric)}` : "-" },
+        { label: `Bottom ${state.metric.toUpperCase()}`, value: bottom ? `${bottom.exchange} ${bottom.symbol} ${percent(bottom.latest.metric)}` : "-" },
+        { label: "Best Cumulative", value: bestCum ? `${bestCum.exchange} ${bestCum.symbol} ${percent(bestCum.latestCum.y)}` : "-" }
+      ];
+      el.stats.innerHTML = cards.map((card) => `<div class="stat"><span class="label">${card.label}</span><span class="value">${card.value}</span></div>`).join("");
+    }
+
+    function renderLegend(seriesList) {
+      el.legend.innerHTML = "";
+      seriesList.forEach((series) => {
+        const item = document.createElement("div");
+        item.className = "legend-item";
+        item.innerHTML = `<span class="swatch" style="background:${series.color}"></span><span>${series.exchange} / ${series.symbol} / ${state.metric.toUpperCase()} ${percent(series.latest?.metric ?? 0)} / Cum ${percent(series.latestCum?.y ?? 0)}</span>`;
+        el.legend.appendChild(item);
+      });
+    }
+
+    function drawChart(canvas, seriesList, pointSelector, pointerSelector) {
+      const points = seriesList.flatMap((series) => pointSelector(series));
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      const width = Math.max(320, Math.floor(rect.width));
+      const height = Math.max(280, Math.floor(rect.height));
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      const ctx = canvas.getContext("2d");
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, width, height);
+      if (!points.length) return;
+
+      let xMin = Math.min(...points.map((p) => p.x));
+      let xMax = Math.max(...points.map((p) => p.x));
+      let yMin = Math.min(...points.map((p) => p.y));
+      let yMax = Math.max(...points.map((p) => p.y));
+      if (xMin === xMax) { xMin -= 3600 * 1000; xMax += 3600 * 1000; }
+      if (yMin === yMax) {
+        const pad = Math.max(Math.abs(yMin) * 0.15, 0.0001);
+        yMin -= pad;
+        yMax += pad;
+      }
+      const yPad = Math.max((yMax - yMin) * 0.14, 0.0001);
+      yMin -= yPad;
+      yMax += yPad;
+
+      const margin = { top: 18, right: 14, bottom: 34, left: 82 };
+      const innerWidth = width - margin.left - margin.right;
+      const innerHeight = height - margin.top - margin.bottom;
+      const toX = (v) => margin.left + ((v - xMin) / (xMax - xMin)) * innerWidth;
+      const toY = (v) => margin.top + (1 - ((v - yMin) / (yMax - yMin))) * innerHeight;
+
+      ctx.font = "12px Segoe UI";
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = "rgba(255,255,255,0.08)";
+      ctx.fillStyle = "rgba(255,255,255,0.45)";
+      for (let i = 0; i <= 4; i += 1) {
+        const ratio = i / 4;
+        const yValue = yMax - (yMax - yMin) * ratio;
+        const y = margin.top + innerHeight * ratio;
+        ctx.beginPath();
+        ctx.moveTo(margin.left, y);
+        ctx.lineTo(width - margin.right, y);
+        ctx.stroke();
+        ctx.fillText(percent(yValue), 8, y + 4);
+      }
+      for (let i = 0; i <= 4; i += 1) {
+        const ratio = i / 4;
+        const xValue = xMin + (xMax - xMin) * ratio;
+        const x = margin.left + innerWidth * ratio;
+        ctx.beginPath();
+        ctx.moveTo(x, margin.top);
+        ctx.lineTo(x, height - margin.bottom);
+        ctx.stroke();
+        ctx.fillText(formatAxisDate(xValue), x - 18, height - 10);
+      }
+      if (yMin < 0 && yMax > 0) {
+        const zeroY = toY(0);
+        ctx.strokeStyle = "rgba(86,211,100,0.28)";
+        ctx.beginPath();
+        ctx.moveTo(margin.left, zeroY);
+        ctx.lineTo(width - margin.right, zeroY);
+        ctx.stroke();
+      }
+      seriesList.forEach((series) => {
+        const seriesPoints = pointSelector(series);
+        ctx.strokeStyle = series.color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        seriesPoints.forEach((p, index) => {
+          const x = toX(p.x);
+          const y = toY(p.y);
+          if (index === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+      });
+      if (state.pointer) {
+        const x = toX(state.pointer.timestamp);
+        ctx.strokeStyle = "rgba(255,255,255,0.5)";
+        ctx.beginPath();
+        ctx.moveTo(x, margin.top);
+        ctx.lineTo(x, height - margin.bottom);
+        ctx.stroke();
+        pointerSelector(state.pointer.timestamp).forEach((p) => {
+          ctx.fillStyle = p.color;
+          ctx.beginPath();
+          ctx.arc(x, toY(p.y), 4, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+    }
+
+    function nearestPointer(seriesList, canvas, clientX) {
+      const rect = canvas.getBoundingClientRect();
+      const width = Math.max(320, Math.floor(rect.width));
+      const margin = { left: 82, right: 14 };
+      const innerWidth = width - margin.left - margin.right;
+      const points = seriesList.flatMap((series) => series.points);
+      if (!points.length) return null;
+      const xMin = Math.min(...points.map((p) => p.x));
+      const xMax = Math.max(...points.map((p) => p.x));
+      const offsetX = clientX - rect.left;
+      const clamped = Math.min(Math.max(offsetX, margin.left), width - margin.right);
+      const targetTs = xMin + ((clamped - margin.left) / innerWidth) * (xMax - xMin);
+      const rows = [];
+      seriesList.forEach((series) => {
+        let nearestIndex = 0;
+        let dist = Infinity;
+        series.points.forEach((point, idx) => {
+          const d = Math.abs(point.x - targetTs);
+          if (d < dist) { dist = d; nearestIndex = idx; }
+        });
+        rows.push({
+          exchange: series.exchange,
+          symbol: series.symbol,
+          metric: series.points[nearestIndex]?.metric ?? 0,
+          cumulative: series.cumulativePoints[nearestIndex]?.y ?? 0,
+          timestamp: series.points[nearestIndex]?.x ?? targetTs,
+          color: series.color
+        });
+      });
+      const timestamps = rows.map((r) => r.timestamp).sort((a, b) => a - b);
+      return { timestamp: timestamps[Math.floor(timestamps.length / 2)], rows };
+    }
+
+    function updateTooltip(pointer) {
+      if (!pointer) {
+        el.tooltip.textContent = "Tap chart to inspect values.";
+        return;
+      }
+      const lines = [formatDateTime(pointer.timestamp)];
+      pointer.rows.sort((a, b) => b.metric - a.metric).forEach((row) => {
+        lines.push(`${row.exchange} / ${row.symbol} / ${state.metric.toUpperCase()} ${percent(row.metric)} / Cum ${percent(row.cumulative)}`);
+      });
+      el.tooltip.textContent = lines.join("\n");
+    }
+
+    function render() {
+      renderTabs();
+      renderFilters();
+      const rows = visibleRows();
+      const seriesList = buildSeries(rows);
+      renderStats(seriesList);
+      renderLegend(seriesList);
+      el.updated.textContent = state.data.lastUpdated ? `Updated ${formatDateTime(state.data.lastUpdated)}` : "Updated -";
+      el.metricTitle.textContent = `${state.metric.toUpperCase()} Chart`;
+      el.metricSubtitle.textContent = `${ASSET_LABELS[state.assetGroup]} / ${state.rangeDays == null ? "ALL" : `${state.rangeDays}D`} / ${state.metric.toUpperCase()}`;
+      el.cumSubtitle.textContent = `${ASSET_LABELS[state.assetGroup]} / ${state.rangeDays == null ? "ALL" : `${state.rangeDays}D`}`;
+      if (seriesList.length === 0) el.empty.classList.remove("hidden"); else el.empty.classList.add("hidden");
+
+      drawChart(el.metricChart, seriesList, (series) => series.points.map((p) => ({ x: p.x, y: p.metric })), (timestamp) => seriesList.map((series) => {
+        let nearest = { y: 0 };
+        let dist = Infinity;
+        series.points.forEach((p) => { const d = Math.abs(p.x - timestamp); if (d < dist) { dist = d; nearest = { y: p.metric }; } });
+        return { color: series.color, y: nearest.y };
+      }));
+
+      drawChart(el.cumChart, seriesList, (series) => series.cumulativePoints, (timestamp) => seriesList.map((series) => {
+        let nearest = { y: 0 };
+        let dist = Infinity;
+        series.cumulativePoints.forEach((p) => { const d = Math.abs(p.x - timestamp); if (d < dist) { dist = d; nearest = p; } });
+        return { color: series.color, y: nearest.y };
+      }));
+
+      updateTooltip(state.pointer);
+    }
+
+    function initEvents() {
+      [el.metricChart, el.cumChart].forEach((canvas) => {
+        canvas.addEventListener("click", (event) => {
+          const seriesList = buildSeries(visibleRows());
+          state.pointer = nearestPointer(seriesList, canvas, event.clientX);
+          render();
+        });
+        canvas.addEventListener("touchstart", (event) => {
+          const touch = event.touches[0];
+          if (!touch) return;
+          const seriesList = buildSeries(visibleRows());
+          state.pointer = nearestPointer(seriesList, canvas, touch.clientX);
+          render();
+        }, { passive: true });
+      });
+      window.addEventListener("resize", () => { if (!el.appShell.classList.contains("hidden")) render(); });
+      el.unlockButton.addEventListener("click", () => unlock().catch((err) => { el.lockError.textContent = `Load failed: ${err.message}`; }));
+      el.passcodeInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") unlock().catch((err) => { el.lockError.textContent = `Load failed: ${err.message}`; });
+      });
+    }
+
+    async function bootstrap() {
+      initEvents();
+      if (sessionStorage.getItem("fr_dashboard_unlocked") === "1") {
+        try {
+          el.lockScreen.classList.add("hidden");
+          el.appShell.classList.remove("hidden");
+          await loadData();
+          render();
+        } catch (err) {
+          el.lockScreen.classList.remove("hidden");
+          el.appShell.classList.add("hidden");
+          el.lockError.textContent = `Load failed: ${err.message}`;
+          sessionStorage.removeItem("fr_dashboard_unlocked");
+        }
+      }
+    }
+
+    bootstrap();
+  </script>
+</body>
+</html>
