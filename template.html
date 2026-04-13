@@ -341,6 +341,11 @@
       if (metric === "apr") return hourly * YEAR_HOURS;
       return Math.pow(1 + hourly, YEAR_HOURS) - 1;
     }
+    function annualizeReturn(totalReturn, durationDays) {
+      if (!Number.isFinite(totalReturn) || !Number.isFinite(durationDays) || durationDays <= 0) return 0;
+      const base = Math.max(1 + totalReturn, 1e-9);
+      return Math.pow(base, 365 / durationDays) - 1;
+    }
 
     function sha256Hex(text) {
       return crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)).then((digest) =>
@@ -496,6 +501,10 @@
         const midPrice = (shortPrice + longPrice) / 2;
         const basisPenalty = midPrice > 0 ? (Math.abs(shortPrice - longPrice) / midPrice) / 2 : 0;
         const netReturn = fundingReturn - feeReturn - basisPenalty;
+        const startTimestamp = Math.min(shortSeries.points[0]?.x ?? Infinity, longSeries.points[0]?.x ?? Infinity);
+        const endTimestamp = Math.max(shortSeries.points[shortSeries.points.length - 1]?.x ?? 0, longSeries.points[longSeries.points.length - 1]?.x ?? 0);
+        const durationDays = Math.max((endTimestamp - startTimestamp) / 86400000, 1 / 24);
+        const netApy = annualizeReturn(netReturn, durationDays);
 
         estimates.push({
           symbol,
@@ -507,6 +516,8 @@
           feeReturn,
           basisPenalty,
           netReturn,
+          netApy,
+          durationDays,
         });
       });
 
@@ -561,13 +572,13 @@
         {
           label: "Best Net Carry Est",
           value: bestCarry
-            ? `${bestCarry.symbol} S:${bestCarry.shortExchange} / L:${bestCarry.longExchange} / ${percent(bestCarry.netReturn)}`
+            ? `${bestCarry.symbol} S:${bestCarry.shortExchange} / L:${bestCarry.longExchange} / ${percent(bestCarry.netReturn)} / APY ${percent(bestCarry.netApy)}`
             : "-"
         },
         {
           label: "Carry Breakdown",
           value: bestCarry
-            ? `FR ${percent(bestCarry.fundingReturn)} / Fee ${percent(bestCarry.feeReturn)} / Basis ${percent(bestCarry.basisPenalty)}`
+            ? `FR ${percent(bestCarry.fundingReturn)} / Fee ${percent(bestCarry.feeReturn)} / Basis ${percent(bestCarry.basisPenalty)} / ${bestCarry.durationDays.toFixed(1)}D`
             : "-"
         }
       ];
