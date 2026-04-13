@@ -54,6 +54,16 @@ TARGET_EXCHANGES = (
     "Pacifica",
 )
 
+TAKER_FEE_RATES = {
+    "Bitget": 0.0006,
+    "Hyperliquid": 0.00045,
+    "Aster": 0.0005,
+    "edgeX": 0.0005,
+    "Lighter": 0.0005,
+    "StandX": 0.0005,
+    "Pacifica": 0.0005,
+}
+
 GOLD_EXACT = {"PAXG", "XAU", "XAUT"}
 GOLD_CONTAINS = ("PAXG", "XAU", "XAUT")
 OIL_EXACT_NORMALIZED = {
@@ -181,6 +191,19 @@ def build_price_record(
     }
 
 
+def build_latest_price_record(exchange: str, symbol: str, price: float, timestamp_ms: int) -> dict[str, Any] | None:
+    asset_group = detect_asset_group(symbol)
+    if not asset_group or price <= 0:
+        return None
+    return {
+        "exchange": exchange,
+        "symbol": symbol,
+        "assetGroup": asset_group,
+        "price": float(price),
+        "timestamp": int(timestamp_ms),
+    }
+
+
 def compact_record(record: dict[str, Any]) -> dict[str, Any]:
     return {
         "exchange": record["exchange"],
@@ -196,6 +219,16 @@ def compact_record(record: dict[str, Any]) -> dict[str, Any]:
 def compact_price_record(record: dict[str, Any]) -> dict[str, Any]:
     return {
         "sourceExchange": record["sourceExchange"],
+        "symbol": record["symbol"],
+        "assetGroup": record["assetGroup"],
+        "price": round(float(record["price"]), 10),
+        "timestamp": int(record["timestamp"]),
+    }
+
+
+def compact_latest_price_record(record: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "exchange": record["exchange"],
         "symbol": record["symbol"],
         "assetGroup": record["assetGroup"],
         "price": round(float(record["price"]), 10),
@@ -231,6 +264,7 @@ def load_existing_dataset() -> dict[str, Any]:
                 return {
                     "records": data.get("records", []),
                     "priceRecords": data.get("priceRecords", []),
+                    "latestPrices": data.get("latestPrices", []),
                     "lastUpdated": to_int(data.get("lastUpdated"), 0),
                 }
         except Exception as exc:
@@ -242,11 +276,12 @@ def load_existing_dataset() -> dict[str, Any]:
         return {
             "records": html_data.get("records", []),
             "priceRecords": html_data.get("priceRecords", []),
+            "latestPrices": html_data.get("latestPrices", []),
             "lastUpdated": to_int(html_data.get("lastUpdated"), 0),
         }
 
     logger.info("既存データがないため、新規作成します")
-    return {"records": [], "priceRecords": [], "lastUpdated": 0}
+    return {"records": [], "priceRecords": [], "latestPrices": [], "lastUpdated": 0}
 
 
 def save_dataset_json(dataset: dict[str, Any]) -> None:
@@ -347,6 +382,14 @@ def replace_exchange_records(
     return merge_records(filtered, replacement_records)
 
 
+def drop_invalid_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    filtered = [row for row in records if not (row["exchange"] == "Aster" and str(row["symbol"]).endswith("USD1"))]
+    removed = len(records) - len(filtered)
+    if removed:
+        logger.info("Aster USD1 履歴を削除しました: {} 件", removed)
+    return filtered
+
+
 def symbols_for_exchange(records: list[dict[str, Any]], exchange: str) -> set[str]:
     return {row["symbol"] for row in records if row["exchange"] == exchange}
 
@@ -443,6 +486,8 @@ def fetch_aster_symbols_and_intervals(session: requests.Session) -> dict[str, fl
     result: dict[str, float] = {}
     for row in payload:
         symbol = str(row.get("symbol", ""))
+        if symbol.endswith("USD1"):
+            continue
         if detect_asset_group(symbol):
             result[symbol] = to_float(row.get("fundingIntervalHours"), 8.0)
     return result
@@ -644,6 +689,99 @@ def fetch_price_history_from_lighter_market_stats(start_ms: int) -> list[dict[st
     return results
 
 
+def fetch_bitget_latest_prices(session: requests.Session) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    now_ms = int(time.time() * 1000)
+    for symbol in fetch_bitget_symbols(session):
+        payload = fetch_json(
+            session,
+            "GET",
+            "https://api.bitget.com/api/v2/mix/market/ticker",
+            params={"symbol": symbol, "productType": BITGET_PRODUCT_TYPE},
+        )
+        data = (payload.get("data") or [{}])[0]
+        price = to_float(data.get("markPrice")) or to_float(data.get("indexPrice")) or to_float(data.get("lastPr"))
+        record = build_latest_price_record("Bitget", symbol, price, now_ms)
+        if record:
+            rows.append(record)
+    return rows
+
+
+def fetch_hyperliquid_latest_prices(session: requests.Session) -> list[dict[str, Any]]:
+    payload = fetch_json(session, "POST", "https://api.hyperliquid.xyz/info", json={"type": "metaAndAssetCtxs"})
+    universe = payload[0].get("universe", [])
+    ctxs = payload[1]
+    rows: list[dict[str, Any]] = []
+    now_ms = int(time.time() * 1000)
+    for meta, ctx in zip(universe, ctxs):
+        symbol = str(meta.get("name", ""))
+        if not detect_asset_group(symbol):
+            continue
+        price = to_float(ctx.get("markPx")) or to_float(ctx.get("oraclePx")) or to_float(ctx.get("midPx"))
+        record = build_latest_price_record("Hyperliquid", symbol, price, now_ms)
+        if record:
+            rows.append(record)
+    return rows
+
+
+def fetch_aster_latest_prices(session: requests.Session) -> list[dict[str, Any]]:
+    payload = fetch_json(session, "GET", "https://fapi.asterdex.com/fapi/v1/premiumIndex")
+    rows: list[dict[str, Any]] = []
+    now_ms = int(time.time() * 1000)
+    for row in payload:
+        symbol = str(row.get("symbol", ""))
+        if symbol.endswith("USD1") or not detect_asset_group(symbol):
+            continue
+        price = to_float(row.get("markPrice")) or to_float(row.get("indexPrice"))
+        record = build_latest_price_record("Aster", symbol, price, now_ms)
+        if record:
+            rows.append(record)
+    return rows
+
+
+def fetch_lighter_latest_prices() -> list[dict[str, Any]]:
+    rows = fetch_price_history_from_lighter_market_stats(BOOTSTRAP_START_MS)
+    latest_by_symbol: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        latest_by_symbol[row["symbol"]] = build_latest_price_record("Lighter", row["symbol"], row["price"], row["timestamp"]) or latest_by_symbol.get(row["symbol"])
+    return [compact_latest_price_record(row) for row in latest_by_symbol.values() if row]
+
+
+def fetch_pacifica_latest_prices(session: requests.Session) -> list[dict[str, Any]]:
+    payload = fetch_json(session, "GET", "https://api.pacifica.fi/api/v1/info/prices").get("data", [])
+    rows: list[dict[str, Any]] = []
+    for row in payload:
+        symbol = str(row.get("symbol", ""))
+        if not detect_asset_group(symbol):
+            continue
+        price = to_float(row.get("mark")) or to_float(row.get("oracle")) or to_float(row.get("mid"))
+        record = build_latest_price_record("Pacifica", symbol, price, to_int(row.get("timestamp"), int(time.time() * 1000)))
+        if record:
+            rows.append(record)
+    return rows
+
+
+def collect_latest_prices(session: requests.Session) -> list[dict[str, Any]]:
+    results: list[dict[str, Any]] = []
+    for label, fn in (
+        ("Bitget", lambda: fetch_bitget_latest_prices(session)),
+        ("Hyperliquid", lambda: fetch_hyperliquid_latest_prices(session)),
+        ("Aster", lambda: fetch_aster_latest_prices(session)),
+        ("Lighter", fetch_lighter_latest_prices),
+        ("Pacifica", lambda: fetch_pacifica_latest_prices(session)),
+    ):
+        try:
+            logger.info("{} 現在価格取得開始", label)
+            results.extend(fn())
+            logger.success("{} 現在価格取得完了", label)
+        except Exception as exc:
+            logger.error("{} 現在価格取得失敗: {}", label, exc)
+    deduped: dict[tuple[str, str], dict[str, Any]] = {}
+    for row in results:
+        deduped[(row["exchange"], row["symbol"])] = compact_latest_price_record(row)
+    return sorted(deduped.values(), key=lambda row: (row["assetGroup"], row["symbol"], row["exchange"]))
+
+
 def collect_backfill_records(existing_records: list[dict[str, Any]], session: requests.Session) -> list[dict[str, Any]]:
     backfill: list[dict[str, Any]] = []
 
@@ -820,6 +958,7 @@ def main() -> int:
         return 1
 
     existing_dataset = load_existing_dataset()
+    existing_dataset["records"] = drop_invalid_records(existing_dataset["records"])
     session = make_session()
 
     existing_dataset["records"] = rebuild_lighter_history(existing_dataset["records"])
@@ -833,8 +972,9 @@ def main() -> int:
     now_ms = int(time.time() * 1000)
     merged_records = compress_records(merged_records, now_ms)
     price_records = compress_price_records(fetch_price_history_from_lighter_market_stats(BOOTSTRAP_START_MS), now_ms)
+    latest_prices = collect_latest_prices(session)
 
-    dataset = {"records": merged_records, "priceRecords": price_records, "lastUpdated": now_ms}
+    dataset = {"records": merged_records, "priceRecords": price_records, "latestPrices": latest_prices, "lastUpdated": now_ms}
     save_dataset_json(dataset)
     web_dataset_json = json.dumps(dataset, ensure_ascii=False, separators=(",", ":"))
     ROOT_DATA_JSON_PATH.write_text(web_dataset_json, encoding="utf-8")
