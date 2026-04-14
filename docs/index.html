@@ -231,6 +231,16 @@
         </div>
         <div class="canvas-wrap"><canvas id="spread-chart"></canvas></div>
       </section>
+
+      <section class="panel">
+        <div class="chart-head">
+          <div>
+            <h2>Cumulative Max-Min FR Spread</h2>
+            <div class="subtle" id="spread-cum-subtitle"></div>
+          </div>
+        </div>
+        <div class="canvas-wrap"><canvas id="spread-cum-chart"></canvas></div>
+      </section>
     </div>
   </div>
 
@@ -280,11 +290,13 @@
       priceChart: document.getElementById("price-chart"),
       cumChart: document.getElementById("cum-chart"),
       spreadChart: document.getElementById("spread-chart"),
+      spreadCumChart: document.getElementById("spread-cum-chart"),
       metricTitle: document.getElementById("metric-title"),
       metricSubtitle: document.getElementById("metric-subtitle"),
       priceSubtitle: document.getElementById("price-subtitle"),
       cumSubtitle: document.getElementById("cum-subtitle"),
       spreadSubtitle: document.getElementById("spread-subtitle"),
+      spreadCumSubtitle: document.getElementById("spread-cum-subtitle"),
       tooltip: document.getElementById("tooltip"),
       empty: document.getElementById("empty-state")
     };
@@ -489,14 +501,84 @@
       seriesList.forEach((series) => {
         series.points.forEach((point) => {
           if (!buckets.has(point.x)) buckets.set(point.x, []);
-          buckets.get(point.x).push(point.metric);
+          buckets.get(point.x).push({
+            metric: point.metric,
+            raw: point.raw,
+            exchange: series.exchange,
+            symbol: series.symbol,
+          });
         });
       });
       const points = [...buckets.entries()]
         .filter(([, values]) => values.length >= 2)
-        .map(([x, values]) => ({ x, y: Math.max(...values) - Math.min(...values) }))
+        .map(([x, values]) => {
+          const sorted = [...values].sort((a, b) => b.metric - a.metric);
+          const max = sorted[0];
+          const min = sorted[sorted.length - 1];
+          return {
+            x,
+            y: max.metric - min.metric,
+            rawSpread: max.raw - min.raw,
+            maxLabel: `${max.exchange} / ${max.symbol}`,
+            minLabel: `${min.exchange} / ${min.symbol}`,
+          };
+        })
         .sort((a, b) => a.x - b.x);
-      return [{ key: "spread", color: "#ffb86b", points, latest: points[points.length - 1] || null }];
+      let equity = 1;
+      const cumulativePoints = points.map((point) => {
+        equity *= (1 + point.rawSpread);
+        return {
+          x: point.x,
+          y: equity - 1,
+          spread: point.y,
+          maxLabel: point.maxLabel,
+          minLabel: point.minLabel,
+        };
+      });
+      return [{
+        key: "spread",
+        color: "#ffb86b",
+        points,
+        cumulativePoints,
+        latest: points[points.length - 1] || null,
+        latestCum: cumulativePoints[cumulativePoints.length - 1] || null,
+      }];
+    }
+
+    function nearestSpreadPointer(seriesList, canvas, clientX, mode) {
+      const rect = canvas.getBoundingClientRect();
+      const width = Math.max(320, Math.floor(rect.width));
+      const margin = { left: 82, right: 14 };
+      const innerWidth = width - margin.left - margin.right;
+      const basePoints = seriesList.flatMap((series) => mode === "cum" ? series.cumulativePoints : series.points);
+      if (!basePoints.length) return null;
+      const xMin = Math.min(...basePoints.map((p) => p.x));
+      const xMax = Math.max(...basePoints.map((p) => p.x));
+      const offsetX = clientX - rect.left;
+      const clamped = Math.min(Math.max(offsetX, margin.left), width - margin.right);
+      const targetTs = xMin + ((clamped - margin.left) / innerWidth) * (xMax - xMin);
+      const rows = [];
+      seriesList.forEach((series) => {
+        const points = mode === "cum" ? series.cumulativePoints : series.points;
+        let nearestIndex = 0;
+        let dist = Infinity;
+        points.forEach((point, idx) => {
+          const d = Math.abs(point.x - targetTs);
+          if (d < dist) { dist = d; nearestIndex = idx; }
+        });
+        const point = points[nearestIndex];
+        if (!point) return;
+        rows.push({
+          label: mode === "cum"
+            ? `Spread Cum ${percent(point.y)} / Max ${point.maxLabel} / Min ${point.minLabel}`
+            : `Spread ${percent(point.y)} / Max ${point.maxLabel} / Min ${point.minLabel}`,
+          sortValue: point.y,
+          timestamp: point.x,
+          color: series.color,
+        });
+      });
+      const timestamps = rows.map((r) => r.timestamp).sort((a, b) => a - b);
+      return { timestamp: timestamps[Math.floor(timestamps.length / 2)], rows, kind: "spread" };
     }
 
     function estimateCarryTrades(seriesList) {
@@ -811,6 +893,7 @@
       el.priceSubtitle.textContent = `${ASSET_LABELS[state.assetGroup]} / ${state.rangeDays == null ? "ALL" : `${state.rangeDays}D`} / Lighter mark price`;
       el.cumSubtitle.textContent = `${ASSET_LABELS[state.assetGroup]} / ${state.rangeDays == null ? "ALL" : `${state.rangeDays}D`}`;
       el.spreadSubtitle.textContent = `${ASSET_LABELS[state.assetGroup]} / ${state.rangeDays == null ? "ALL" : `${state.rangeDays}D`} / max(${state.metric.toUpperCase()}) - min(${state.metric.toUpperCase()})`;
+      el.spreadCumSubtitle.textContent = `${ASSET_LABELS[state.assetGroup]} / ${state.rangeDays == null ? "ALL" : `${state.rangeDays}D`} / cumulative max-min spread`;
       if (seriesList.length === 0) el.empty.classList.remove("hidden"); else el.empty.classList.add("hidden");
 
       drawChart(el.metricChart, seriesList, (series) => series.points.map((p) => ({ x: p.x, y: p.metric })), (timestamp) => seriesList.map((series) => {
@@ -842,6 +925,13 @@
         return { color: series.color, y: nearest.y };
       }));
 
+      drawChart(el.spreadCumChart, spreadSeriesList, (series) => series.cumulativePoints, (timestamp) => spreadSeriesList.map((series) => {
+        let nearest = { y: 0 };
+        let dist = Infinity;
+        series.cumulativePoints.forEach((p) => { const d = Math.abs(p.x - timestamp); if (d < dist) { dist = d; nearest = p; } });
+        return { color: series.color, y: nearest.y };
+      }));
+
       updateTooltip(state.pointer);
     }
 
@@ -861,10 +951,8 @@
       bindPointer(el.metricChart, (canvas, clientX) => nearestFundingPointer(buildSeries(visibleRows()), canvas, clientX));
       bindPointer(el.cumChart, (canvas, clientX) => nearestFundingPointer(buildSeries(visibleRows()), canvas, clientX));
       bindPointer(el.priceChart, (canvas, clientX) => nearestPricePointer(buildPriceSeries(visiblePriceRows()), canvas, clientX));
-      bindPointer(el.spreadChart, (canvas, clientX) => {
-        const spreadSeriesList = buildSpreadSeries(buildSeries(visibleRows()));
-        return nearestPricePointer(spreadSeriesList, canvas, clientX);
-      });
+      bindPointer(el.spreadChart, (canvas, clientX) => nearestSpreadPointer(buildSpreadSeries(buildSeries(visibleRows())), canvas, clientX, "spot"));
+      bindPointer(el.spreadCumChart, (canvas, clientX) => nearestSpreadPointer(buildSpreadSeries(buildSeries(visibleRows())), canvas, clientX, "cum"));
       window.addEventListener("resize", () => { if (!el.appShell.classList.contains("hidden")) render(); });
       el.unlockButton.addEventListener("click", () => unlock().catch((err) => { el.lockError.textContent = `Load failed: ${err.message}`; }));
       el.passcodeInput.addEventListener("keydown", (event) => {
