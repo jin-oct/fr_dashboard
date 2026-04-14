@@ -486,43 +486,57 @@
       const estimates = [];
       grouped.forEach((candidates, symbol) => {
         if (candidates.length < 2) return;
-        const sortedByStart = [...candidates].sort((a, b) => (b.points[0]?.hourly ?? -Infinity) - (a.points[0]?.hourly ?? -Infinity));
-        const shortSeries = sortedByStart[0];
-        const longSeries = sortedByStart[sortedByStart.length - 1];
-        if (!shortSeries || !longSeries || shortSeries.exchange === longSeries.exchange) return;
+        const evaluateDirection = (shortSeries, longSeries) => {
+          if (!shortSeries || !longSeries || shortSeries.exchange === longSeries.exchange) return null;
+          const shortPrice = latestPriceByKey.get(`${shortSeries.exchange}|${symbol}`)?.price;
+          const longPrice = latestPriceByKey.get(`${longSeries.exchange}|${symbol}`)?.price;
+          if (!Number.isFinite(shortPrice) || !Number.isFinite(longPrice) || shortPrice <= 0 || longPrice <= 0) return null;
 
-        const shortPrice = latestPriceByKey.get(`${shortSeries.exchange}|${symbol}`)?.price;
-        const longPrice = latestPriceByKey.get(`${longSeries.exchange}|${symbol}`)?.price;
-        if (!Number.isFinite(shortPrice) || !Number.isFinite(longPrice) || shortPrice <= 0 || longPrice <= 0) return;
+          let shortEquity = 1;
+          shortSeries.points.forEach((point) => { shortEquity *= (1 + point.raw); });
+          let longEquity = 1;
+          longSeries.points.forEach((point) => { longEquity *= (1 - point.raw); });
 
-        let shortEquity = 1;
-        shortSeries.points.forEach((point) => { shortEquity *= (1 + point.raw); });
-        let longEquity = 1;
-        longSeries.points.forEach((point) => { longEquity *= (1 - point.raw); });
+          const fundingReturn = ((shortEquity - 1) + (longEquity - 1)) / 2;
+          const feeReturn = (TAKER_FEE_RATES[shortSeries.exchange] || 0.0005) + (TAKER_FEE_RATES[longSeries.exchange] || 0.0005);
+          const midPrice = (shortPrice + longPrice) / 2;
+          const basisPenalty = midPrice > 0 ? (Math.abs(shortPrice - longPrice) / midPrice) / 2 : 0;
+          const netReturn = fundingReturn - feeReturn - basisPenalty;
+          const startTimestamp = Math.min(shortSeries.points[0]?.x ?? Infinity, longSeries.points[0]?.x ?? Infinity);
+          const endTimestamp = Math.max(shortSeries.points[shortSeries.points.length - 1]?.x ?? 0, longSeries.points[longSeries.points.length - 1]?.x ?? 0);
+          const durationDays = Math.max((endTimestamp - startTimestamp) / 86400000, 1 / 24);
+          const netApy = annualizeReturn(netReturn, durationDays);
+          return {
+            symbol,
+            shortExchange: shortSeries.exchange,
+            longExchange: longSeries.exchange,
+            startShortHourly: shortSeries.points[0]?.hourly ?? 0,
+            startLongHourly: longSeries.points[0]?.hourly ?? 0,
+            fundingReturn,
+            feeReturn,
+            basisPenalty,
+            netReturn,
+            netApy,
+            durationDays,
+          };
+        };
 
-        const fundingReturn = ((shortEquity - 1) + (longEquity - 1)) / 2;
-        const feeReturn = (TAKER_FEE_RATES[shortSeries.exchange] || 0.0005) + (TAKER_FEE_RATES[longSeries.exchange] || 0.0005);
-        const midPrice = (shortPrice + longPrice) / 2;
-        const basisPenalty = midPrice > 0 ? (Math.abs(shortPrice - longPrice) / midPrice) / 2 : 0;
-        const netReturn = fundingReturn - feeReturn - basisPenalty;
-        const startTimestamp = Math.min(shortSeries.points[0]?.x ?? Infinity, longSeries.points[0]?.x ?? Infinity);
-        const endTimestamp = Math.max(shortSeries.points[shortSeries.points.length - 1]?.x ?? 0, longSeries.points[longSeries.points.length - 1]?.x ?? 0);
-        const durationDays = Math.max((endTimestamp - startTimestamp) / 86400000, 1 / 24);
-        const netApy = annualizeReturn(netReturn, durationDays);
-
-        estimates.push({
-          symbol,
-          shortExchange: shortSeries.exchange,
-          longExchange: longSeries.exchange,
-          startShortHourly: shortSeries.points[0]?.hourly ?? 0,
-          startLongHourly: longSeries.points[0]?.hourly ?? 0,
-          fundingReturn,
-          feeReturn,
-          basisPenalty,
-          netReturn,
-          netApy,
-          durationDays,
-        });
+        let bestForSymbol = null;
+        for (let i = 0; i < candidates.length; i += 1) {
+          for (let j = i + 1; j < candidates.length; j += 1) {
+            const a = candidates[i];
+            const b = candidates[j];
+            const forward = evaluateDirection(a, b);
+            const reverse = evaluateDirection(b, a);
+            const localBest = [forward, reverse].filter(Boolean).sort((x, y) => y.netReturn - x.netReturn)[0] || null;
+            if (!bestForSymbol || (localBest && localBest.netReturn > bestForSymbol.netReturn)) {
+              bestForSymbol = localBest;
+            }
+          }
+        }
+        if (bestForSymbol) {
+          estimates.push(bestForSymbol);
+        }
       });
 
       return estimates.sort((a, b) => b.netReturn - a.netReturn);
