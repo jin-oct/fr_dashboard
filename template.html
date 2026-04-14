@@ -497,52 +497,69 @@
     }
 
     function buildSpreadSeries(seriesList) {
-      const buckets = new Map();
-      seriesList.forEach((series) => {
-        series.points.forEach((point) => {
-          if (!buckets.has(point.x)) buckets.set(point.x, []);
-          buckets.get(point.x).push({
-            metric: point.metric,
-            raw: point.raw,
-            exchange: series.exchange,
-            symbol: series.symbol,
+      const buildPairSeries = (shortSeries, longSeries) => {
+        if (!shortSeries.points.length || !longSeries.points.length) return null;
+        const shortPoints = shortSeries.points;
+        const longPoints = longSeries.points;
+        const timestamps = [...new Set([...shortPoints.map((p) => p.x), ...longPoints.map((p) => p.x)])].sort((a, b) => a - b);
+        let shortIdx = -1;
+        let longIdx = -1;
+        const points = [];
+        timestamps.forEach((timestamp) => {
+          while (shortIdx + 1 < shortPoints.length && shortPoints[shortIdx + 1].x <= timestamp) shortIdx += 1;
+          while (longIdx + 1 < longPoints.length && longPoints[longIdx + 1].x <= timestamp) longIdx += 1;
+          if (shortIdx < 0 || longIdx < 0) return;
+          const shortPoint = shortPoints[shortIdx];
+          const longPoint = longPoints[longIdx];
+          points.push({
+            x: timestamp,
+            y: shortPoint.metric - longPoint.metric,
+            rawSpread: shortPoint.raw - longPoint.raw,
+            shortLabel: `${shortSeries.exchange} / ${shortSeries.symbol}`,
+            longLabel: `${longSeries.exchange} / ${longSeries.symbol}`,
           });
         });
-      });
-      const points = [...buckets.entries()]
-        .filter(([, values]) => values.length >= 2)
-        .map(([x, values]) => {
-          const sorted = [...values].sort((a, b) => b.metric - a.metric);
-          const max = sorted[0];
-          const min = sorted[sorted.length - 1];
+        let equity = 1;
+        const cumulativePoints = points.map((point) => {
+          equity *= (1 + point.rawSpread);
           return {
-            x,
-            y: max.metric - min.metric,
-            rawSpread: max.raw - min.raw,
-            maxLabel: `${max.exchange} / ${max.symbol}`,
-            minLabel: `${min.exchange} / ${min.symbol}`,
+            x: point.x,
+            y: equity - 1,
+            spread: point.y,
+            shortLabel: point.shortLabel,
+            longLabel: point.longLabel,
           };
-        })
-        .sort((a, b) => a.x - b.x);
-      let equity = 1;
-      const cumulativePoints = points.map((point) => {
-        equity *= (1 + point.rawSpread);
+        });
         return {
-          x: point.x,
-          y: equity - 1,
-          spread: point.y,
-          maxLabel: point.maxLabel,
-          minLabel: point.minLabel,
+          key: "spread",
+          color: "#ffb86b",
+          points,
+          cumulativePoints,
+          latest: points[points.length - 1] || null,
+          latestCum: cumulativePoints[cumulativePoints.length - 1] || null,
+          shortLabel: `${shortSeries.exchange} / ${shortSeries.symbol}`,
+          longLabel: `${longSeries.exchange} / ${longSeries.symbol}`,
         };
-      });
-      return [{
-        key: "spread",
-        color: "#ffb86b",
-        points,
-        cumulativePoints,
-        latest: points[points.length - 1] || null,
-        latestCum: cumulativePoints[cumulativePoints.length - 1] || null,
-      }];
+      };
+
+      let bestSeries = null;
+      for (let i = 0; i < seriesList.length; i += 1) {
+        for (let j = i + 1; j < seriesList.length; j += 1) {
+          const a = seriesList[i];
+          const b = seriesList[j];
+          const candidates = [buildPairSeries(a, b), buildPairSeries(b, a)].filter(Boolean);
+          candidates.forEach((candidate) => {
+            const score = candidate.latestCum?.y ?? -Infinity;
+            const bestScore = bestSeries?.latestCum?.y ?? -Infinity;
+            if (!bestSeries || score > bestScore) bestSeries = candidate;
+          });
+        }
+      }
+
+      if (!bestSeries) {
+        return [{ key: "spread", color: "#ffb86b", points: [], cumulativePoints: [], latest: null, latestCum: null, shortLabel: "", longLabel: "" }];
+      }
+      return [bestSeries];
     }
 
     function nearestSpreadPointer(seriesList, canvas, clientX, mode) {
@@ -570,8 +587,8 @@
         if (!point) return;
         rows.push({
           label: mode === "cum"
-            ? `Spread Cum ${percent(point.y)} / Max ${point.maxLabel} / Min ${point.minLabel}`
-            : `Spread ${percent(point.y)} / Max ${point.maxLabel} / Min ${point.minLabel}`,
+            ? `Spread Cum ${percent(point.y)} / Short ${point.shortLabel} / Long ${point.longLabel}`
+            : `Spread ${percent(point.y)} / Short ${point.shortLabel} / Long ${point.longLabel}`,
           sortValue: point.y,
           timestamp: point.x,
           color: series.color,
@@ -892,8 +909,10 @@
       el.metricSubtitle.textContent = `${ASSET_LABELS[state.assetGroup]} / ${state.rangeDays == null ? "ALL" : `${state.rangeDays}D`} / ${state.metric.toUpperCase()}`;
       el.priceSubtitle.textContent = `${ASSET_LABELS[state.assetGroup]} / ${state.rangeDays == null ? "ALL" : `${state.rangeDays}D`} / Lighter mark price`;
       el.cumSubtitle.textContent = `${ASSET_LABELS[state.assetGroup]} / ${state.rangeDays == null ? "ALL" : `${state.rangeDays}D`}`;
-      el.spreadSubtitle.textContent = `${ASSET_LABELS[state.assetGroup]} / ${state.rangeDays == null ? "ALL" : `${state.rangeDays}D`} / max(${state.metric.toUpperCase()}) - min(${state.metric.toUpperCase()})`;
-      el.spreadCumSubtitle.textContent = `${ASSET_LABELS[state.assetGroup]} / ${state.rangeDays == null ? "ALL" : `${state.rangeDays}D`} / cumulative max-min spread`;
+      const spreadSeriesList = buildSpreadSeries(seriesList);
+      const spreadPairLabel = spreadSeriesList[0]?.shortLabel ? `${spreadSeriesList[0].shortLabel} short / ${spreadSeriesList[0].longLabel} long` : "pair unavailable";
+      el.spreadSubtitle.textContent = `${ASSET_LABELS[state.assetGroup]} / ${state.rangeDays == null ? "ALL" : `${state.rangeDays}D`} / fixed best cumulative pair / ${spreadPairLabel}`;
+      el.spreadCumSubtitle.textContent = `${ASSET_LABELS[state.assetGroup]} / ${state.rangeDays == null ? "ALL" : `${state.rangeDays}D`} / cumulative fixed-pair spread / ${spreadPairLabel}`;
       if (seriesList.length === 0) el.empty.classList.remove("hidden"); else el.empty.classList.add("hidden");
 
       drawChart(el.metricChart, seriesList, (series) => series.points.map((p) => ({ x: p.x, y: p.metric })), (timestamp) => seriesList.map((series) => {
@@ -917,7 +936,6 @@
         return { color: series.color, y: nearest.y };
       }));
 
-      const spreadSeriesList = buildSpreadSeries(seriesList);
       drawChart(el.spreadChart, spreadSeriesList, (series) => series.points, (timestamp) => spreadSeriesList.map((series) => {
         let nearest = { y: 0 };
         let dist = Infinity;
