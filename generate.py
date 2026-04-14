@@ -83,10 +83,10 @@ ALLOWED_NORMALIZED_SYMBOLS = {
     "eth": {"ETH", "ETHUSD", "ETHUSD1", "ETHUSDT", "ETHUSDTPERP"},
     "sol": {"SOL", "SOLUSD", "SOLUSD1", "SOLUSDT", "SOLUSDTPERP"},
     "xag": {"XAG", "XAGUSD", "XAGUSD1", "XAGUSDT"},
-    "coin": {"COIN"},
-    "mstr": {"MSTR"},
-    "tsla": {"TSLA"},
-    "nvda": {"NVDA"},
+    "coin": {"COIN", "COINUSDT", "COINUSDTPERP"},
+    "mstr": {"MSTR", "MSTRUSDT", "MSTRUSDTPERP"},
+    "tsla": {"TSLA", "TSLAUSDT", "TSLAUSDTPERP"},
+    "nvda": {"NVDA", "NVDAUSDT", "NVDAUSDTPERP"},
 }
 
 
