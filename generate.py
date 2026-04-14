@@ -47,6 +47,7 @@ SCRIPT_NAME = Path(__file__).name
 TARGET_EXCHANGES = (
     "Bitget",
     "Hyperliquid",
+    "Hyperliquid(XYZ)",
     "Aster",
     "edgeX",
     "Lighter",
@@ -78,15 +79,15 @@ XAG_EXACT = {"XAG"}
 
 ALLOWED_NORMALIZED_SYMBOLS = {
     "gold": {"PAXG", "PAXGUSD", "PAXGUSDT", "XAU", "XAUUSD", "XAUUSD1", "XAUUSDT", "XAUT", "XAUTUSD", "XAUTUSDT", "XAUUSDTPERP"},
-    "oil": {"CL", "CLUSD", "CLUSD1", "CLUSDT", "CLUSDTPERP", "WTI", "WTIOILUSDC", "BRENT", "BRENTOIL", "XYZBRENTOIL"},
+    "oil": {"CL", "XYZCL", "CLUSD", "CLUSD1", "CLUSDT", "CLUSDTPERP", "WTI", "WTIOILUSDC", "BRENT", "BRENTOIL", "XYZBRENTOIL"},
     "btc": {"BTC", "BTCUSD", "BTCUSD1", "BTCUSDT", "XBT", "XBTUSD", "BTCUSDTPERP"},
     "eth": {"ETH", "ETHUSD", "ETHUSD1", "ETHUSDT", "ETHUSDTPERP"},
     "sol": {"SOL", "SOLUSD", "SOLUSD1", "SOLUSDT", "SOLUSDTPERP"},
-    "xag": {"XAG", "XAGUSD", "XAGUSD1", "XAGUSDT"},
-    "coin": {"COIN", "COINUSDT", "COINUSDTPERP"},
-    "mstr": {"MSTR", "MSTRUSDT", "MSTRUSDTPERP"},
-    "tsla": {"TSLA", "TSLAUSDT", "TSLAUSDTPERP"},
-    "nvda": {"NVDA", "NVDAUSDT", "NVDAUSDTPERP"},
+    "xag": {"XAG", "XAGUSD", "XAGUSD1", "XAGUSDT", "XYZSILVER"},
+    "coin": {"COIN", "COINUSDT", "COINUSDTPERP", "XYZCOIN"},
+    "mstr": {"MSTR", "MSTRUSDT", "MSTRUSDTPERP", "XYZMSTR"},
+    "tsla": {"TSLA", "TSLAUSDT", "TSLAUSDTPERP", "XYZTSLA"},
+    "nvda": {"NVDA", "NVDAUSDT", "NVDAUSDTPERP", "XYZNVDA"},
 }
 
 
@@ -493,6 +494,30 @@ def fetch_hyperliquid_history(session: requests.Session, symbol: str, start_ms: 
     return results
 
 
+def fetch_hyperliquid_xyz_symbols(session: requests.Session) -> list[str]:
+    payload = fetch_json(session, "POST", "https://api.hyperliquid.xyz/info", json={"type": "metaAndAssetCtxs", "dex": "xyz"})
+    return [
+        str(row.get("name", ""))
+        for row in payload[0].get("universe", [])
+        if detect_asset_group(str(row.get("name", "")))
+    ]
+
+
+def fetch_hyperliquid_xyz_history(session: requests.Session, symbol: str, start_ms: int) -> list[dict[str, Any]]:
+    payload = fetch_json(
+        session,
+        "POST",
+        "https://api.hyperliquid.xyz/info",
+        json={"type": "fundingHistory", "coin": symbol, "startTime": max(start_ms + 1, 0), "dex": "xyz"},
+    )
+    results = []
+    for row in payload:
+        record = build_record("Hyperliquid(XYZ)", symbol, to_float(row.get("fundingRate")), 1.0, to_int(row.get("time")))
+        if record:
+            results.append(record)
+    return results
+
+
 def fetch_aster_symbols_and_intervals(session: requests.Session) -> dict[str, float]:
     payload = fetch_json(session, "GET", "https://fapi.asterdex.com/fapi/v1/fundingInfo")
     result: dict[str, float] = {}
@@ -736,6 +761,23 @@ def fetch_hyperliquid_latest_prices(session: requests.Session) -> list[dict[str,
     return rows
 
 
+def fetch_hyperliquid_xyz_latest_prices(session: requests.Session) -> list[dict[str, Any]]:
+    payload = fetch_json(session, "POST", "https://api.hyperliquid.xyz/info", json={"type": "metaAndAssetCtxs", "dex": "xyz"})
+    universe = payload[0].get("universe", [])
+    ctxs = payload[1]
+    rows: list[dict[str, Any]] = []
+    now_ms = int(time.time() * 1000)
+    for meta, ctx in zip(universe, ctxs):
+        symbol = str(meta.get("name", ""))
+        if not detect_asset_group(symbol):
+            continue
+        price = to_float(ctx.get("markPx")) or to_float(ctx.get("oraclePx")) or to_float(ctx.get("midPx"))
+        record = build_latest_price_record("Hyperliquid(XYZ)", symbol, price, now_ms)
+        if record:
+            rows.append(record)
+    return rows
+
+
 def fetch_aster_latest_prices(session: requests.Session) -> list[dict[str, Any]]:
     payload = fetch_json(session, "GET", "https://fapi.asterdex.com/fapi/v1/premiumIndex")
     rows: list[dict[str, Any]] = []
@@ -778,6 +820,7 @@ def collect_latest_prices(session: requests.Session) -> list[dict[str, Any]]:
     for label, fn in (
         ("Bitget", lambda: fetch_bitget_latest_prices(session)),
         ("Hyperliquid", lambda: fetch_hyperliquid_latest_prices(session)),
+        ("Hyperliquid(XYZ)", lambda: fetch_hyperliquid_xyz_latest_prices(session)),
         ("Aster", lambda: fetch_aster_latest_prices(session)),
         ("Lighter", fetch_lighter_latest_prices),
         ("Pacifica", lambda: fetch_pacifica_latest_prices(session)),
@@ -814,6 +857,15 @@ def collect_backfill_records(existing_records: list[dict[str, Any]], session: re
         logger.success("Hyperliquid バックフィル完了")
     except Exception as exc:
         logger.error("Hyperliquid バックフィル失敗: {}", exc)
+
+    try:
+        logger.info("Hyperliquid(XYZ) バックフィル開始")
+        for symbol in fetch_hyperliquid_xyz_symbols(session):
+            if need_bootstrap(existing_records, "Hyperliquid(XYZ)", symbol):
+                backfill.extend(fetch_hyperliquid_xyz_history(session, symbol, BOOTSTRAP_START_MS))
+        logger.success("Hyperliquid(XYZ) バックフィル完了")
+    except Exception as exc:
+        logger.error("Hyperliquid(XYZ) バックフィル失敗: {}", exc)
 
     try:
         logger.info("Aster バックフィル開始")
@@ -892,6 +944,14 @@ def collect_incremental_records(existing_records: list[dict[str, Any]], session:
         logger.success("Hyperliquid 差分取得完了")
     except Exception as exc:
         logger.error("Hyperliquid 差分取得失敗: {}", exc)
+
+    try:
+        logger.info("Hyperliquid(XYZ) 差分取得開始")
+        for symbol in fetch_hyperliquid_xyz_symbols(session):
+            new_records.extend(fetch_hyperliquid_xyz_history(session, symbol, latest_timestamp(existing_records, "Hyperliquid(XYZ)", symbol)))
+        logger.success("Hyperliquid(XYZ) 差分取得完了")
+    except Exception as exc:
+        logger.error("Hyperliquid(XYZ) 差分取得失敗: {}", exc)
 
     try:
         logger.info("Aster 差分取得開始")
