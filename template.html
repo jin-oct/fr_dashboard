@@ -221,6 +221,16 @@
         <div id="tooltip" class="tooltip">Tap chart to inspect values.</div>
         <div id="empty-state" class="empty hidden">No visible data.</div>
       </section>
+
+      <section class="panel">
+        <div class="chart-head">
+          <div>
+            <h2>Max-Min FR Spread</h2>
+            <div class="subtle" id="spread-subtitle"></div>
+          </div>
+        </div>
+        <div class="canvas-wrap"><canvas id="spread-chart"></canvas></div>
+      </section>
     </div>
   </div>
 
@@ -269,10 +279,12 @@
       metricChart: document.getElementById("metric-chart"),
       priceChart: document.getElementById("price-chart"),
       cumChart: document.getElementById("cum-chart"),
+      spreadChart: document.getElementById("spread-chart"),
       metricTitle: document.getElementById("metric-title"),
       metricSubtitle: document.getElementById("metric-subtitle"),
       priceSubtitle: document.getElementById("price-subtitle"),
       cumSubtitle: document.getElementById("cum-subtitle"),
+      spreadSubtitle: document.getElementById("spread-subtitle"),
       tooltip: document.getElementById("tooltip"),
       empty: document.getElementById("empty-state")
     };
@@ -470,6 +482,21 @@
         series.latest = series.points[series.points.length - 1] || null;
         return series;
       }).sort((a, b) => (b.latest?.y ?? -Infinity) - (a.latest?.y ?? -Infinity));
+    }
+
+    function buildSpreadSeries(seriesList) {
+      const buckets = new Map();
+      seriesList.forEach((series) => {
+        series.points.forEach((point) => {
+          if (!buckets.has(point.x)) buckets.set(point.x, []);
+          buckets.get(point.x).push(point.metric);
+        });
+      });
+      const points = [...buckets.entries()]
+        .filter(([, values]) => values.length >= 2)
+        .map(([x, values]) => ({ x, y: Math.max(...values) - Math.min(...values) }))
+        .sort((a, b) => a.x - b.x);
+      return [{ key: "spread", color: "#ffb86b", points, latest: points[points.length - 1] || null }];
     }
 
     function estimateCarryTrades(seriesList) {
@@ -749,7 +776,7 @@
           if (d < dist) { dist = d; nearestIndex = idx; }
         });
         rows.push({
-          label: `${series.symbol} / Price ${formatPrice(series.points[nearestIndex]?.y ?? 0)}`,
+          label: `${series.symbol || "Spread"} / ${(series.symbol ? "Price" : state.metric.toUpperCase())} ${formatPrice(series.points[nearestIndex]?.y ?? 0)}`,
           sortValue: series.points[nearestIndex]?.y ?? 0,
           timestamp: series.points[nearestIndex]?.x ?? targetTs,
           color: series.color
@@ -783,6 +810,7 @@
       el.metricSubtitle.textContent = `${ASSET_LABELS[state.assetGroup]} / ${state.rangeDays == null ? "ALL" : `${state.rangeDays}D`} / ${state.metric.toUpperCase()}`;
       el.priceSubtitle.textContent = `${ASSET_LABELS[state.assetGroup]} / ${state.rangeDays == null ? "ALL" : `${state.rangeDays}D`} / Lighter mark price`;
       el.cumSubtitle.textContent = `${ASSET_LABELS[state.assetGroup]} / ${state.rangeDays == null ? "ALL" : `${state.rangeDays}D`}`;
+      el.spreadSubtitle.textContent = `${ASSET_LABELS[state.assetGroup]} / ${state.rangeDays == null ? "ALL" : `${state.rangeDays}D`} / max(${state.metric.toUpperCase()}) - min(${state.metric.toUpperCase()})`;
       if (seriesList.length === 0) el.empty.classList.remove("hidden"); else el.empty.classList.add("hidden");
 
       drawChart(el.metricChart, seriesList, (series) => series.points.map((p) => ({ x: p.x, y: p.metric })), (timestamp) => seriesList.map((series) => {
@@ -806,6 +834,14 @@
         return { color: series.color, y: nearest.y };
       }));
 
+      const spreadSeriesList = buildSpreadSeries(seriesList);
+      drawChart(el.spreadChart, spreadSeriesList, (series) => series.points, (timestamp) => spreadSeriesList.map((series) => {
+        let nearest = { y: 0 };
+        let dist = Infinity;
+        series.points.forEach((p) => { const d = Math.abs(p.x - timestamp); if (d < dist) { dist = d; nearest = p; } });
+        return { color: series.color, y: nearest.y };
+      }));
+
       updateTooltip(state.pointer);
     }
 
@@ -825,6 +861,10 @@
       bindPointer(el.metricChart, (canvas, clientX) => nearestFundingPointer(buildSeries(visibleRows()), canvas, clientX));
       bindPointer(el.cumChart, (canvas, clientX) => nearestFundingPointer(buildSeries(visibleRows()), canvas, clientX));
       bindPointer(el.priceChart, (canvas, clientX) => nearestPricePointer(buildPriceSeries(visiblePriceRows()), canvas, clientX));
+      bindPointer(el.spreadChart, (canvas, clientX) => {
+        const spreadSeriesList = buildSpreadSeries(buildSeries(visibleRows()));
+        return nearestPricePointer(spreadSeriesList, canvas, clientX);
+      });
       window.addEventListener("resize", () => { if (!el.appShell.classList.contains("hidden")) render(); });
       el.unlockButton.addEventListener("click", () => unlock().catch((err) => { el.lockError.textContent = `Load failed: ${err.message}`; }));
       el.passcodeInput.addEventListener("keydown", (event) => {
