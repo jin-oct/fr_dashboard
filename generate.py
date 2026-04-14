@@ -83,6 +83,10 @@ ALLOWED_NORMALIZED_SYMBOLS = {
     "eth": {"ETH", "ETHUSD", "ETHUSD1", "ETHUSDT", "ETHUSDTPERP"},
     "sol": {"SOL", "SOLUSD", "SOLUSD1", "SOLUSDT", "SOLUSDTPERP"},
     "xag": {"XAG", "XAGUSD", "XAGUSD1", "XAGUSDT"},
+    "coin": {"COIN"},
+    "mstr": {"MSTR"},
+    "tsla": {"TSLA"},
+    "nvda": {"NVDA"},
 }
 
 
@@ -121,6 +125,14 @@ def detect_asset_group(symbol: str) -> str | None:
         return "sol"
     if normalized in ALLOWED_NORMALIZED_SYMBOLS["oil"] or raw in OIL_EXACT_RAW:
         return "oil"
+    if normalized in ALLOWED_NORMALIZED_SYMBOLS["coin"]:
+        return "coin"
+    if normalized in ALLOWED_NORMALIZED_SYMBOLS["mstr"]:
+        return "mstr"
+    if normalized in ALLOWED_NORMALIZED_SYMBOLS["tsla"]:
+        return "tsla"
+    if normalized in ALLOWED_NORMALIZED_SYMBOLS["nvda"]:
+        return "nvda"
     return None
 
 
@@ -623,7 +635,7 @@ def open_text_file(path: Path):
 
 
 def fetch_lighter_history_from_local(start_ms: int) -> list[dict[str, Any]]:
-    target_symbols = {"PAXG", "XAU", "WTI", "BRENTOIL"}
+    target_symbols = {"PAXG", "XAU", "WTI", "BRENTOIL", "COIN", "MSTR", "TSLA", "NVDA"}
     hourly_last: dict[tuple[str, int], dict[str, Any]] = {}
     files = iter_raw_files(LIGHTER_MARKET_STATS_RAW_DIR, start_ms)
     logger.info("Lighter market_stats raw 走査開始: files={}", len(files))
@@ -655,7 +667,7 @@ def fetch_lighter_history_from_local(start_ms: int) -> list[dict[str, Any]]:
 
 
 def fetch_price_history_from_lighter_market_stats(start_ms: int) -> list[dict[str, Any]]:
-    target_symbols = {"BTC", "ETH", "SOL", "PAXG", "XAU", "WTI", "BRENTOIL", "XAG"}
+    target_symbols = {"BTC", "ETH", "SOL", "PAXG", "XAU", "WTI", "BRENTOIL", "XAG", "COIN", "MSTR", "TSLA", "NVDA"}
     latest_by_bucket: dict[tuple[str, int], dict[str, Any]] = {}
     files = iter_raw_files(LIGHTER_MARKET_STATS_RAW_DIR, start_ms)
     logger.info("Lighter price raw 走査開始: files={}", len(files))
