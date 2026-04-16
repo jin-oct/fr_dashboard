@@ -332,6 +332,10 @@
       const digits = abs >= 1000 ? 2 : abs >= 100 ? 3 : abs >= 1 ? 4 : 6;
       return v.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: digits });
     }
+    function formatDollar(v) {
+      if (!Number.isFinite(v)) return "-";
+      return `$${formatPrice(v)}`;
+    }
     function escapeHtml(value) {
       return String(value)
         .replaceAll("&", "&amp;")
@@ -497,13 +501,22 @@
     }
 
     function buildSpreadSeries(seriesList) {
+      const latestPriceByKey = latestPriceMap();
       const buildPairSeries = (shortSeries, longSeries) => {
         if (!shortSeries.points.length || !longSeries.points.length) return null;
+        const bucket = canonicalSymbol(shortSeries.symbol, state.assetGroup);
+        const shortPrice = latestPriceByKey.get(`${shortSeries.exchange}|${bucket}`)?.price;
+        const longPrice = latestPriceByKey.get(`${longSeries.exchange}|${bucket}`)?.price;
+        if (!Number.isFinite(shortPrice) || !Number.isFinite(longPrice) || shortPrice <= 0 || longPrice <= 0) return null;
         const shortPoints = shortSeries.points;
         const longPoints = longSeries.points;
         const timestamps = [...new Set([...shortPoints.map((p) => p.x), ...longPoints.map((p) => p.x)])].sort((a, b) => a - b);
         let shortIdx = -1;
         let longIdx = -1;
+        const feeReturn = (TAKER_FEE_RATES[shortSeries.exchange] || 0.0005) + (TAKER_FEE_RATES[longSeries.exchange] || 0.0005);
+        const midPrice = (shortPrice + longPrice) / 2;
+        const basisPenalty = midPrice > 0 ? (Math.abs(shortPrice - longPrice) / midPrice) / 2 : 0;
+        let equity = Math.max(1 - feeReturn - basisPenalty, 1e-9);
         const points = [];
         timestamps.forEach((timestamp) => {
           while (shortIdx + 1 < shortPoints.length && shortPoints[shortIdx + 1].x <= timestamp) shortIdx += 1;
@@ -511,23 +524,27 @@
           if (shortIdx < 0 || longIdx < 0) return;
           const shortPoint = shortPoints[shortIdx];
           const longPoint = longPoints[longIdx];
+          equity *= (1 + (shortPoint.raw - longPoint.raw));
           points.push({
             x: timestamp,
-            y: shortPoint.metric - longPoint.metric,
+            y: equity,
+            spread: shortPoint.metric - longPoint.metric,
             rawSpread: shortPoint.raw - longPoint.raw,
             shortLabel: `${shortSeries.exchange} / ${shortSeries.symbol}`,
             longLabel: `${longSeries.exchange} / ${longSeries.symbol}`,
+            feeReturn,
+            basisPenalty,
           });
         });
-        let equity = 1;
         const cumulativePoints = points.map((point) => {
-          equity *= (1 + point.rawSpread);
           return {
             x: point.x,
-            y: equity - 1,
-            spread: point.y,
+            y: point.y - 1,
+            spread: point.spread,
             shortLabel: point.shortLabel,
             longLabel: point.longLabel,
+            feeReturn: point.feeReturn,
+            basisPenalty: point.basisPenalty,
           };
         });
         return {
@@ -539,6 +556,8 @@
           latestCum: cumulativePoints[cumulativePoints.length - 1] || null,
           shortLabel: `${shortSeries.exchange} / ${shortSeries.symbol}`,
           longLabel: `${longSeries.exchange} / ${longSeries.symbol}`,
+          feeReturn,
+          basisPenalty,
         };
       };
 
@@ -549,8 +568,8 @@
           const b = seriesList[j];
           const candidates = [buildPairSeries(a, b), buildPairSeries(b, a)].filter(Boolean);
           candidates.forEach((candidate) => {
-            const score = candidate.latestCum?.y ?? -Infinity;
-            const bestScore = bestSeries?.latestCum?.y ?? -Infinity;
+            const score = candidate.latest?.y ?? -Infinity;
+            const bestScore = bestSeries?.latest?.y ?? -Infinity;
             if (!bestSeries || score > bestScore) bestSeries = candidate;
           });
         }
@@ -587,8 +606,8 @@
         if (!point) return;
         rows.push({
           label: mode === "cum"
-            ? `Spread Cum ${percent(point.y)} / Short ${point.shortLabel} / Long ${point.longLabel}`
-            : `Spread ${percent(point.y)} / Short ${point.shortLabel} / Long ${point.longLabel}`,
+            ? `PnL ${percent(point.y)} / Short ${point.shortLabel} / Long ${point.longLabel} / Fee ${percent(point.feeReturn)} / Basis ${percent(point.basisPenalty)}`
+            : `Value ${formatDollar(point.y)} / Spread ${percent(point.spread)} / Short ${point.shortLabel} / Long ${point.longLabel} / Fee ${percent(point.feeReturn)} / Basis ${percent(point.basisPenalty)}`,
           sortValue: point.y,
           timestamp: point.x,
           color: series.color,
@@ -911,8 +930,8 @@
       el.cumSubtitle.textContent = `${ASSET_LABELS[state.assetGroup]} / ${state.rangeDays == null ? "ALL" : `${state.rangeDays}D`}`;
       const spreadSeriesList = buildSpreadSeries(seriesList);
       const spreadPairLabel = spreadSeriesList[0]?.shortLabel ? `${spreadSeriesList[0].shortLabel} short / ${spreadSeriesList[0].longLabel} long` : "pair unavailable";
-      el.spreadSubtitle.textContent = `${ASSET_LABELS[state.assetGroup]} / ${state.rangeDays == null ? "ALL" : `${state.rangeDays}D`} / fixed best cumulative pair / ${spreadPairLabel}`;
-      el.spreadCumSubtitle.textContent = `${ASSET_LABELS[state.assetGroup]} / ${state.rangeDays == null ? "ALL" : `${state.rangeDays}D`} / cumulative fixed-pair spread / ${spreadPairLabel}`;
+      el.spreadSubtitle.textContent = `${ASSET_LABELS[state.assetGroup]} / ${state.rangeDays == null ? "ALL" : `${state.rangeDays}D`} / $1 value curve / ${spreadPairLabel}`;
+      el.spreadCumSubtitle.textContent = `${ASSET_LABELS[state.assetGroup]} / ${state.rangeDays == null ? "ALL" : `${state.rangeDays}D`} / cumulative return / ${spreadPairLabel}`;
       if (seriesList.length === 0) el.empty.classList.remove("hidden"); else el.empty.classList.add("hidden");
 
       drawChart(el.metricChart, seriesList, (series) => series.points.map((p) => ({ x: p.x, y: p.metric })), (timestamp) => seriesList.map((series) => {
@@ -941,7 +960,7 @@
         let dist = Infinity;
         series.points.forEach((p) => { const d = Math.abs(p.x - timestamp); if (d < dist) { dist = d; nearest = p; } });
         return { color: series.color, y: nearest.y };
-      }));
+      }), { formatY: formatDollar, zeroLine: false });
 
       drawChart(el.spreadCumChart, spreadSeriesList, (series) => series.cumulativePoints, (timestamp) => spreadSeriesList.map((series) => {
         let nearest = { y: 0 };
