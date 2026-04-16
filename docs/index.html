@@ -81,7 +81,6 @@
     }
     canvas { width: 100%; height: 100%; display: block; }
     .tooltip, .empty {
-      margin-top: 10px;
       padding: 12px;
       border-radius: 14px;
       background: var(--panel2);
@@ -89,6 +88,19 @@
       font-size: 13px;
       line-height: 1.55;
       white-space: normal;
+    }
+    .tooltip {
+      position: fixed;
+      z-index: 60;
+      max-width: min(360px, calc(100vw - 24px));
+      pointer-events: none;
+      box-shadow: 0 14px 30px rgba(0,0,0,0.35);
+    }
+    .tooltip.hidden {
+      display: none !important;
+    }
+    .empty {
+      margin-top: 10px;
     }
     .tooltip-time {
       color: var(--text);
@@ -218,7 +230,6 @@
           </div>
         </div>
         <div class="canvas-wrap"><canvas id="cum-chart"></canvas></div>
-        <div id="tooltip" class="tooltip">Tap chart to inspect values.</div>
         <div id="empty-state" class="empty hidden">No visible data.</div>
       </section>
 
@@ -232,17 +243,10 @@
         <div class="canvas-wrap"><canvas id="spread-chart"></canvas></div>
       </section>
 
-      <section class="panel">
-        <div class="chart-head">
-          <div>
-            <h2>Cumulative Max-Min FR Spread</h2>
-            <div class="subtle" id="spread-cum-subtitle"></div>
-          </div>
-        </div>
-        <div class="canvas-wrap"><canvas id="spread-cum-chart"></canvas></div>
-      </section>
     </div>
   </div>
+
+  <div id="tooltip" class="tooltip hidden">Tap chart to inspect values.</div>
 
   <script id="inline-data-json" type="application/json">null</script>
   <script>
@@ -290,13 +294,11 @@
       priceChart: document.getElementById("price-chart"),
       cumChart: document.getElementById("cum-chart"),
       spreadChart: document.getElementById("spread-chart"),
-      spreadCumChart: document.getElementById("spread-cum-chart"),
       metricTitle: document.getElementById("metric-title"),
       metricSubtitle: document.getElementById("metric-subtitle"),
       priceSubtitle: document.getElementById("price-subtitle"),
       cumSubtitle: document.getElementById("cum-subtitle"),
       spreadSubtitle: document.getElementById("spread-subtitle"),
-      spreadCumSubtitle: document.getElementById("spread-cum-subtitle"),
       tooltip: document.getElementById("tooltip"),
       empty: document.getElementById("empty-state")
     };
@@ -581,12 +583,12 @@
       return [bestSeries];
     }
 
-    function nearestSpreadPointer(seriesList, canvas, clientX, mode) {
+    function nearestSpreadPointer(seriesList, canvas, clientX, clientY) {
       const rect = canvas.getBoundingClientRect();
       const width = Math.max(320, Math.floor(rect.width));
       const margin = { left: 82, right: 14 };
       const innerWidth = width - margin.left - margin.right;
-      const basePoints = seriesList.flatMap((series) => mode === "cum" ? series.cumulativePoints : series.points);
+      const basePoints = seriesList.flatMap((series) => series.points);
       if (!basePoints.length) return null;
       const xMin = Math.min(...basePoints.map((p) => p.x));
       const xMax = Math.max(...basePoints.map((p) => p.x));
@@ -595,7 +597,7 @@
       const targetTs = xMin + ((clamped - margin.left) / innerWidth) * (xMax - xMin);
       const rows = [];
       seriesList.forEach((series) => {
-        const points = mode === "cum" ? series.cumulativePoints : series.points;
+        const points = series.points;
         let nearestIndex = 0;
         let dist = Infinity;
         points.forEach((point, idx) => {
@@ -605,16 +607,21 @@
         const point = points[nearestIndex];
         if (!point) return;
         rows.push({
-          label: mode === "cum"
-            ? `PnL ${percent(point.y)} / Short ${point.shortLabel} / Long ${point.longLabel} / Fee ${percent(point.feeReturn)} / Basis ${percent(point.basisPenalty)}`
-            : `Value ${formatDollar(point.y)} / Spread ${percent(point.spread)} / Short ${point.shortLabel} / Long ${point.longLabel} / Fee ${percent(point.feeReturn)} / Basis ${percent(point.basisPenalty)}`,
+          label: `Value ${formatDollar(point.y)} / Spread ${percent(point.spread)} / Short ${point.shortLabel} / Long ${point.longLabel} / Fee ${percent(point.feeReturn)} / Basis ${percent(point.basisPenalty)}`,
           sortValue: point.y,
           timestamp: point.x,
           color: series.color,
         });
       });
       const timestamps = rows.map((r) => r.timestamp).sort((a, b) => a - b);
-      return { timestamp: timestamps[Math.floor(timestamps.length / 2)], rows, kind: "spread" };
+      return {
+        timestamp: timestamps[Math.floor(timestamps.length / 2)],
+        rows,
+        kind: "spread",
+        canvasId: canvas.id,
+        clientX,
+        clientY
+      };
     }
 
     function estimateCarryTrades(seriesList) {
@@ -842,7 +849,7 @@
       }
     }
 
-    function nearestFundingPointer(seriesList, canvas, clientX) {
+    function nearestFundingPointer(seriesList, canvas, clientX, clientY) {
       const rect = canvas.getBoundingClientRect();
       const width = Math.max(320, Math.floor(rect.width));
       const margin = { left: 82, right: 14 };
@@ -870,10 +877,17 @@
         });
       });
       const timestamps = rows.map((r) => r.timestamp).sort((a, b) => a - b);
-      return { timestamp: timestamps[Math.floor(timestamps.length / 2)], rows, kind: "funding" };
+      return {
+        timestamp: timestamps[Math.floor(timestamps.length / 2)],
+        rows,
+        kind: "funding",
+        canvasId: canvas.id,
+        clientX,
+        clientY
+      };
     }
 
-    function nearestPricePointer(seriesList, canvas, clientX) {
+    function nearestPricePointer(seriesList, canvas, clientX, clientY) {
       const rect = canvas.getBoundingClientRect();
       const width = Math.max(320, Math.floor(rect.width));
       const margin = { left: 82, right: 14 };
@@ -901,12 +915,19 @@
         });
       });
       const timestamps = rows.map((r) => r.timestamp).sort((a, b) => a - b);
-      return { timestamp: timestamps[Math.floor(timestamps.length / 2)], rows, kind: "price" };
+      return {
+        timestamp: timestamps[Math.floor(timestamps.length / 2)],
+        rows,
+        kind: "price",
+        canvasId: canvas.id,
+        clientX,
+        clientY
+      };
     }
 
     function updateTooltip(pointer) {
       if (!pointer) {
-        el.tooltip.textContent = "Tap chart to inspect values.";
+        el.tooltip.classList.add("hidden");
         return;
       }
       const rows = [...pointer.rows].sort((a, b) => b.sortValue - a.sortValue);
@@ -914,6 +935,20 @@
         .map((row) => `<div class="tooltip-row"><span class="tooltip-dot" style="background:${row.color}"></span><span>${escapeHtml(row.label)}</span></div>`)
         .join("");
       el.tooltip.innerHTML = `<div class="tooltip-time">${formatDateTime(pointer.timestamp)}</div><div class="tooltip-list">${body}</div>`;
+      el.tooltip.classList.remove("hidden");
+      const margin = 12;
+      const tooltipWidth = Math.min(360, window.innerWidth - (margin * 2));
+      const left = Math.min(
+        Math.max(pointer.clientX + 14, margin),
+        Math.max(margin, window.innerWidth - tooltipWidth - margin)
+      );
+      const tooltipHeight = el.tooltip.offsetHeight || 120;
+      const top = Math.min(
+        Math.max(pointer.clientY + 14, margin),
+        Math.max(margin, window.innerHeight - tooltipHeight - margin)
+      );
+      el.tooltip.style.left = `${left}px`;
+      el.tooltip.style.top = `${top}px`;
     }
 
     function render() {
@@ -931,7 +966,6 @@
       const spreadSeriesList = buildSpreadSeries(seriesList);
       const spreadPairLabel = spreadSeriesList[0]?.shortLabel ? `${spreadSeriesList[0].shortLabel} short / ${spreadSeriesList[0].longLabel} long` : "pair unavailable";
       el.spreadSubtitle.textContent = `${ASSET_LABELS[state.assetGroup]} / ${state.rangeDays == null ? "ALL" : `${state.rangeDays}D`} / $1 value curve / ${spreadPairLabel}`;
-      el.spreadCumSubtitle.textContent = `${ASSET_LABELS[state.assetGroup]} / ${state.rangeDays == null ? "ALL" : `${state.rangeDays}D`} / cumulative return / ${spreadPairLabel}`;
       if (seriesList.length === 0) el.empty.classList.remove("hidden"); else el.empty.classList.add("hidden");
 
       drawChart(el.metricChart, seriesList, (series) => series.points.map((p) => ({ x: p.x, y: p.metric })), (timestamp) => seriesList.map((series) => {
@@ -962,34 +996,40 @@
         return { color: series.color, y: nearest.y };
       }), { formatY: formatDollar, zeroLine: false });
 
-      drawChart(el.spreadCumChart, spreadSeriesList, (series) => series.cumulativePoints, (timestamp) => spreadSeriesList.map((series) => {
-        let nearest = { y: 0 };
-        let dist = Infinity;
-        series.cumulativePoints.forEach((p) => { const d = Math.abs(p.x - timestamp); if (d < dist) { dist = d; nearest = p; } });
-        return { color: series.color, y: nearest.y };
-      }));
-
       updateTooltip(state.pointer);
     }
 
     function initEvents() {
       const bindPointer = (canvas, resolver) => {
-        canvas.addEventListener("click", (event) => {
-          state.pointer = resolver(canvas, event.clientX);
+        const togglePointer = (clientX, clientY) => {
+          const shouldHide = state.pointer
+            && state.pointer.canvasId === canvas.id
+            && Math.abs(state.pointer.clientX - clientX) < 18
+            && Math.abs(state.pointer.clientY - clientY) < 18;
+          state.pointer = shouldHide ? null : resolver(canvas, clientX, clientY);
           render();
+        };
+        canvas.addEventListener("click", (event) => {
+          togglePointer(event.clientX, event.clientY);
         });
         canvas.addEventListener("touchstart", (event) => {
           const touch = event.touches[0];
           if (!touch) return;
-          state.pointer = resolver(canvas, touch.clientX);
-          render();
+          togglePointer(touch.clientX, touch.clientY);
         }, { passive: true });
+        canvas.addEventListener("mousemove", (event) => {
+          state.pointer = resolver(canvas, event.clientX, event.clientY);
+          render();
+        });
+        canvas.addEventListener("mouseleave", () => {
+          state.pointer = null;
+          render();
+        });
       };
-      bindPointer(el.metricChart, (canvas, clientX) => nearestFundingPointer(buildSeries(visibleRows()), canvas, clientX));
-      bindPointer(el.cumChart, (canvas, clientX) => nearestFundingPointer(buildSeries(visibleRows()), canvas, clientX));
-      bindPointer(el.priceChart, (canvas, clientX) => nearestPricePointer(buildPriceSeries(visiblePriceRows()), canvas, clientX));
-      bindPointer(el.spreadChart, (canvas, clientX) => nearestSpreadPointer(buildSpreadSeries(buildSeries(visibleRows())), canvas, clientX, "spot"));
-      bindPointer(el.spreadCumChart, (canvas, clientX) => nearestSpreadPointer(buildSpreadSeries(buildSeries(visibleRows())), canvas, clientX, "cum"));
+      bindPointer(el.metricChart, (canvas, clientX, clientY) => nearestFundingPointer(buildSeries(visibleRows()), canvas, clientX, clientY));
+      bindPointer(el.cumChart, (canvas, clientX, clientY) => nearestFundingPointer(buildSeries(visibleRows()), canvas, clientX, clientY));
+      bindPointer(el.priceChart, (canvas, clientX, clientY) => nearestPricePointer(buildPriceSeries(visiblePriceRows()), canvas, clientX, clientY));
+      bindPointer(el.spreadChart, (canvas, clientX, clientY) => nearestSpreadPointer(buildSpreadSeries(buildSeries(visibleRows())), canvas, clientX, clientY));
       window.addEventListener("resize", () => { if (!el.appShell.classList.contains("hidden")) render(); });
       el.unlockButton.addEventListener("click", () => unlock().catch((err) => { el.lockError.textContent = `Load failed: ${err.message}`; }));
       el.passcodeInput.addEventListener("keydown", (event) => {
