@@ -88,6 +88,15 @@ ALLOWED_NORMALIZED_SYMBOLS = {
     "mstr": {"MSTR", "MSTRUSDT", "MSTRUSDTPERP", "XYZMSTR"},
     "tsla": {"TSLA", "TSLAUSDT", "TSLAUSDTPERP", "XYZTSLA"},
     "nvda": {"NVDA", "NVDAUSDT", "NVDAUSDTPERP", "XYZNVDA"},
+    "aapl": {"AAPL", "AAPLUSDT", "AAPLUSDTPERP", "XYZAAPL"},
+    "amzn": {"AMZN", "AMZNUSDT", "AMZNUSDTPERP", "XYZAMZN"},
+    "meta": {"META", "METAUSDT", "METAUSDTPERP", "XYZMETA"},
+    "googl": {"GOOGL", "GOOGLUSDT", "GOOGLUSDTPERP", "XYZGOOGL"},
+    "msft": {"MSFT", "MSFTUSDT", "MSFTUSDTPERP", "XYZMSFT"},
+    "amd": {"AMD", "AMDUSDT", "AMDUSDTPERP", "XYZAMD"},
+    "nflx": {"NFLX", "NFLXUSDT", "NFLXUSDTPERP", "XYZNFLX"},
+    "spy": {"SPY", "SPYUSDT", "SPYUSDTPERP", "XYZSPY"},
+    "qqq": {"QQQ", "QQQUSDT", "QQQUSDTPERP", "XYZQQQ"},
 }
 
 
@@ -134,6 +143,24 @@ def detect_asset_group(symbol: str) -> str | None:
         return "tsla"
     if normalized in ALLOWED_NORMALIZED_SYMBOLS["nvda"]:
         return "nvda"
+    if normalized in ALLOWED_NORMALIZED_SYMBOLS["aapl"]:
+        return "aapl"
+    if normalized in ALLOWED_NORMALIZED_SYMBOLS["amzn"]:
+        return "amzn"
+    if normalized in ALLOWED_NORMALIZED_SYMBOLS["meta"]:
+        return "meta"
+    if normalized in ALLOWED_NORMALIZED_SYMBOLS["googl"]:
+        return "googl"
+    if normalized in ALLOWED_NORMALIZED_SYMBOLS["msft"]:
+        return "msft"
+    if normalized in ALLOWED_NORMALIZED_SYMBOLS["amd"]:
+        return "amd"
+    if normalized in ALLOWED_NORMALIZED_SYMBOLS["nflx"]:
+        return "nflx"
+    if normalized in ALLOWED_NORMALIZED_SYMBOLS["spy"]:
+        return "spy"
+    if normalized in ALLOWED_NORMALIZED_SYMBOLS["qqq"]:
+        return "qqq"
     return None
 
 

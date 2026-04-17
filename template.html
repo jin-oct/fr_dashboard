@@ -205,6 +205,16 @@
       <section class="panel">
         <div class="chart-head">
           <div>
+            <h2>$1 Net Value Curve</h2>
+            <div class="subtle" id="spread-subtitle"></div>
+          </div>
+        </div>
+        <div class="canvas-wrap"><canvas id="spread-chart"></canvas></div>
+      </section>
+
+      <section class="panel">
+        <div class="chart-head">
+          <div>
             <h2 id="metric-title">Metric Chart</h2>
             <div class="subtle" id="metric-subtitle"></div>
           </div>
@@ -233,16 +243,6 @@
         <div id="empty-state" class="empty hidden">No visible data.</div>
       </section>
 
-      <section class="panel">
-        <div class="chart-head">
-          <div>
-            <h2>Max-Min FR Spread</h2>
-            <div class="subtle" id="spread-subtitle"></div>
-          </div>
-        </div>
-        <div class="canvas-wrap"><canvas id="spread-chart"></canvas></div>
-      </section>
-
     </div>
   </div>
 
@@ -252,7 +252,7 @@
   <script>
     const TARGET_EXCHANGES = __TARGET_EXCHANGES__;
     const PASSCODE_SHA256 = "0f179fbfd346fdd67b2f7276afcef7e3b617e71e86088ae47bc5cec86d9e5594";
-    const ASSET_LABELS = { gold: "Gold", oil: "Oil", btc: "BTC", eth: "ETH", sol: "SOL", xag: "XAG", coin: "COIN", mstr: "MSTR", tsla: "TSLA", nvda: "NVDA" };
+    const ASSET_LABELS = { gold: "Gold", oil: "Oil", btc: "BTC", eth: "ETH", sol: "SOL", xag: "XAG", coin: "COIN", mstr: "MSTR", tsla: "TSLA", nvda: "NVDA", aapl: "AAPL", amzn: "AMZN", meta: "META", googl: "GOOGL", msft: "MSFT", amd: "AMD", nflx: "NFLX", spy: "SPY", qqq: "QQQ" };
     const RANGE_OPTIONS = [
       { label: "24H", days: 1 },
       { label: "7D", days: 7 },
@@ -365,6 +365,15 @@
       if (assetGroup === "mstr") return "MSTR";
       if (assetGroup === "tsla") return "TSLA";
       if (assetGroup === "nvda") return "NVDA";
+      if (assetGroup === "aapl") return "AAPL";
+      if (assetGroup === "amzn") return "AMZN";
+      if (assetGroup === "meta") return "META";
+      if (assetGroup === "googl") return "GOOGL";
+      if (assetGroup === "msft") return "MSFT";
+      if (assetGroup === "amd") return "AMD";
+      if (assetGroup === "nflx") return "NFLX";
+      if (assetGroup === "spy") return "SPY";
+      if (assetGroup === "qqq") return "QQQ";
       return raw;
     }
 
@@ -711,7 +720,7 @@
     }
 
     function renderTabs() {
-      renderButtons(el.assetTabs, ["gold","oil","btc","eth","sol","xag","coin","mstr","tsla","nvda"], (x) => ASSET_LABELS[x], (x) => state.assetGroup === x, (x) => { state.assetGroup = x; state.pointer = null; render(); });
+      renderButtons(el.assetTabs, ["gold","oil","btc","eth","sol","xag","coin","mstr","tsla","nvda","aapl","amzn","meta","googl","msft","amd","nflx","spy","qqq"], (x) => ASSET_LABELS[x], (x) => state.assetGroup === x, (x) => { state.assetGroup = x; state.pointer = null; render(); });
       renderButtons(el.rangeTabs, RANGE_OPTIONS, (x) => x.label, (x) => state.rangeDays === x.days, (x) => { state.rangeDays = x.days; state.pointer = null; render(); });
       renderButtons(el.metricTabs, METRIC_OPTIONS, (x) => x.toUpperCase(), (x) => state.metric === x, (x) => { state.metric = x; state.pointer = null; render(); });
     }
