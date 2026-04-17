@@ -84,6 +84,21 @@ ALLOWED_NORMALIZED_SYMBOLS = {
     "eth": {"ETH", "ETHUSD", "ETHUSD1", "ETHUSDT", "ETHUSDTPERP"},
     "sol": {"SOL", "SOLUSD", "SOLUSD1", "SOLUSDT", "SOLUSDTPERP"},
     "xag": {"XAG", "XAGUSD", "XAGUSD1", "XAGUSDT", "XYZSILVER"},
+    "copper": {"COPPER", "COPPERUSDT", "XYZCOPPER"},
+    "platinum": {"XPT", "XPTUSDT", "XYZPLATINUM", "PLATINUM"},
+    "bnb": {"BNB", "BNBUSD", "BNBUSDT", "BNBUSDTPERP"},
+    "xrp": {"XRP", "XRPUSD", "XRPUSDT", "XRPUSDTPERP"},
+    "ada": {"ADA", "ADAUSD", "ADAUSDT", "ADAUSDTPERP"},
+    "doge": {"DOGE", "DOGEUSD", "DOGEUSDT", "DOGEUSDTPERP"},
+    "ltc": {"LTC", "LTCUSD", "LTCUSDT", "LTCUSDTPERP"},
+    "bch": {"BCH", "BCHUSD", "BCHUSDT", "BCHUSDTPERP"},
+    "trx": {"TRX", "TRXUSD", "TRXUSDT", "TRXUSDTPERP"},
+    "avax": {"AVAX", "AVAXUSD", "AVAXUSDT", "AVAXUSDTPERP"},
+    "link": {"LINK", "LINKUSD", "LINKUSDT", "LINKUSDTPERP"},
+    "dot": {"DOT", "DOTUSD", "DOTUSDT", "DOTUSDTPERP"},
+    "sui": {"SUI", "SUIUSD", "SUIUSDT", "SUIUSDTPERP"},
+    "ton": {"TON", "TONUSD", "TONUSDT", "TONUSDTPERP"},
+    "xlm": {"XLM", "XLMUSD", "XLMUSDT", "XLMUSDTPERP"},
     "coin": {"COIN", "COINUSDT", "COINUSDTPERP", "XYZCOIN"},
     "mstr": {"MSTR", "MSTRUSDT", "MSTRUSDTPERP", "XYZMSTR"},
     "tsla": {"TSLA", "TSLAUSDT", "TSLAUSDTPERP", "XYZTSLA"},
@@ -125,6 +140,10 @@ def detect_asset_group(symbol: str) -> str | None:
 
     if normalized in ALLOWED_NORMALIZED_SYMBOLS["gold"] or raw in {"XAU-USD", "PAXG", "XAU", "XAUT"}:
         return "gold"
+    if normalized in ALLOWED_NORMALIZED_SYMBOLS["copper"]:
+        return "copper"
+    if normalized in ALLOWED_NORMALIZED_SYMBOLS["platinum"]:
+        return "platinum"
     if normalized in ALLOWED_NORMALIZED_SYMBOLS["xag"] or raw == "XAG-USD":
         return "xag"
     if normalized in ALLOWED_NORMALIZED_SYMBOLS["btc"] or raw == "BTC-USD":
@@ -133,6 +152,32 @@ def detect_asset_group(symbol: str) -> str | None:
         return "eth"
     if normalized in ALLOWED_NORMALIZED_SYMBOLS["sol"] or raw == "SOL-USD":
         return "sol"
+    if normalized in ALLOWED_NORMALIZED_SYMBOLS["bnb"]:
+        return "bnb"
+    if normalized in ALLOWED_NORMALIZED_SYMBOLS["xrp"]:
+        return "xrp"
+    if normalized in ALLOWED_NORMALIZED_SYMBOLS["ada"]:
+        return "ada"
+    if normalized in ALLOWED_NORMALIZED_SYMBOLS["doge"]:
+        return "doge"
+    if normalized in ALLOWED_NORMALIZED_SYMBOLS["ltc"]:
+        return "ltc"
+    if normalized in ALLOWED_NORMALIZED_SYMBOLS["bch"]:
+        return "bch"
+    if normalized in ALLOWED_NORMALIZED_SYMBOLS["trx"]:
+        return "trx"
+    if normalized in ALLOWED_NORMALIZED_SYMBOLS["avax"]:
+        return "avax"
+    if normalized in ALLOWED_NORMALIZED_SYMBOLS["link"]:
+        return "link"
+    if normalized in ALLOWED_NORMALIZED_SYMBOLS["dot"]:
+        return "dot"
+    if normalized in ALLOWED_NORMALIZED_SYMBOLS["sui"]:
+        return "sui"
+    if normalized in ALLOWED_NORMALIZED_SYMBOLS["ton"]:
+        return "ton"
+    if normalized in ALLOWED_NORMALIZED_SYMBOLS["xlm"]:
+        return "xlm"
     if normalized in ALLOWED_NORMALIZED_SYMBOLS["oil"] or raw in OIL_EXACT_RAW:
         return "oil"
     if normalized in ALLOWED_NORMALIZED_SYMBOLS["coin"]:
