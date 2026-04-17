@@ -515,10 +515,13 @@
         const timestamps = [...new Set([...shortPoints.map((p) => p.x), ...longPoints.map((p) => p.x)])].sort((a, b) => a - b);
         let shortIdx = -1;
         let longIdx = -1;
-        const feeReturn = (TAKER_FEE_RATES[shortSeries.exchange] || 0.0005) + (TAKER_FEE_RATES[longSeries.exchange] || 0.0005);
+        const shortFeeRate = TAKER_FEE_RATES[shortSeries.exchange] || 0.0005;
+        const longFeeRate = TAKER_FEE_RATES[longSeries.exchange] || 0.0005;
+        const feeReturn = (shortFeeRate + longFeeRate) / 2;
         const midPrice = (shortPrice + longPrice) / 2;
         const basisPenalty = midPrice > 0 ? (Math.abs(shortPrice - longPrice) / midPrice) / 2 : 0;
-        let equity = Math.max(1 - feeReturn - basisPenalty, 1e-9);
+        let shortEquity = Math.max(0.5 - (shortFeeRate * 0.5) - (basisPenalty * 0.5), 1e-9);
+        let longEquity = Math.max(0.5 - (longFeeRate * 0.5) - (basisPenalty * 0.5), 1e-9);
         const points = [];
         timestamps.forEach((timestamp) => {
           while (shortIdx + 1 < shortPoints.length && shortPoints[shortIdx + 1].x <= timestamp) shortIdx += 1;
@@ -526,7 +529,9 @@
           if (shortIdx < 0 || longIdx < 0) return;
           const shortPoint = shortPoints[shortIdx];
           const longPoint = longPoints[longIdx];
-          equity *= (1 + (shortPoint.raw - longPoint.raw));
+          shortEquity *= (1 + shortPoint.raw);
+          longEquity *= (1 - longPoint.raw);
+          const equity = shortEquity + longEquity;
           points.push({
             x: timestamp,
             y: equity,
@@ -644,13 +649,13 @@
           const longPrice = latestPriceByKey.get(`${longSeries.exchange}|${symbol}`)?.price;
           if (!Number.isFinite(shortPrice) || !Number.isFinite(longPrice) || shortPrice <= 0 || longPrice <= 0) return null;
 
-          let shortEquity = 1;
+          let shortEquity = 0.5;
           shortSeries.points.forEach((point) => { shortEquity *= (1 + point.raw); });
-          let longEquity = 1;
+          let longEquity = 0.5;
           longSeries.points.forEach((point) => { longEquity *= (1 - point.raw); });
 
-          const fundingReturn = ((shortEquity - 1) + (longEquity - 1)) / 2;
-          const feeReturn = (TAKER_FEE_RATES[shortSeries.exchange] || 0.0005) + (TAKER_FEE_RATES[longSeries.exchange] || 0.0005);
+          const fundingReturn = (shortEquity + longEquity) - 1;
+          const feeReturn = ((TAKER_FEE_RATES[shortSeries.exchange] || 0.0005) + (TAKER_FEE_RATES[longSeries.exchange] || 0.0005)) / 2;
           const midPrice = (shortPrice + longPrice) / 2;
           const basisPenalty = midPrice > 0 ? (Math.abs(shortPrice - longPrice) / midPrice) / 2 : 0;
           const netReturn = fundingReturn - feeReturn - basisPenalty;
