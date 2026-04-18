@@ -548,13 +548,21 @@
         let longEquity = Math.max(0.5 - (longFeeRate * 0.5) - (basisPenalty * 0.5), 1e-9);
         const points = [];
         timestamps.forEach((timestamp) => {
-          while (shortIdx + 1 < shortPoints.length && shortPoints[shortIdx + 1].x <= timestamp) shortIdx += 1;
-          while (longIdx + 1 < longPoints.length && longPoints[longIdx + 1].x <= timestamp) longIdx += 1;
+          let shortAdvanced = false;
+          let longAdvanced = false;
+          while (shortIdx + 1 < shortPoints.length && shortPoints[shortIdx + 1].x <= timestamp) {
+            shortIdx += 1;
+            if (shortPoints[shortIdx].x === timestamp) shortAdvanced = true;
+          }
+          while (longIdx + 1 < longPoints.length && longPoints[longIdx + 1].x <= timestamp) {
+            longIdx += 1;
+            if (longPoints[longIdx].x === timestamp) longAdvanced = true;
+          }
           if (shortIdx < 0 || longIdx < 0) return;
           const shortPoint = shortPoints[shortIdx];
           const longPoint = longPoints[longIdx];
-          shortEquity *= (1 + shortPoint.raw);
-          longEquity *= (1 - longPoint.raw);
+          if (shortAdvanced) shortEquity *= (1 + shortPoint.raw);
+          if (longAdvanced) longEquity *= (1 - longPoint.raw);
           const equity = shortEquity + longEquity;
           points.push({
             x: timestamp,
