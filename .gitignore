@@ -1,3 +1,10 @@
 __pycache__/
 *.pyc
 tmp_index_script.js
+generate.py
+publish.ps1
+template.html
+funding_dataset.json
+index.html
+data.json
+GITHUB_PAGES_SETUP.md
