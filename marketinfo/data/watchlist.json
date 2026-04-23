@@ -1,0 +1,48 @@
+{
+  "updated_at": "2026-04-24 01:48 JST",
+  "editable": true,
+  "items": [
+    {
+      "id": "wl-jp-semiconductor",
+      "symbol": "8035.T",
+      "name": "東京エレクトロン",
+      "category": "日本株",
+      "priority": "high",
+      "trigger": "米SOX指数上昇 + USDJPY堅調 + 25日線反発",
+      "action_plan": "寄り後30分の高値更新で分割エントリー、前日安値割れで撤退",
+      "thesis": "米AI投資継続と円安が追い風。短期需給が戻る局面を優先監視。",
+      "notes": [
+        "米ハイベータ崩れ時は見送り",
+        "指数寄与が大きいため日経先物との相関に注意"
+      ]
+    },
+    {
+      "id": "wl-fx-usdjpy",
+      "symbol": "USDJPY",
+      "name": "米ドル / 円",
+      "category": "為替",
+      "priority": "high",
+      "trigger": "155円接近時の介入警戒と押し戻し",
+      "action_plan": "ブレイク追随は短期のみ、急変時は輸出株ヘッジとして使用",
+      "thesis": "日米金利差は追い風だが、当局牽制で瞬間的な逆噴射リスクがある。",
+      "notes": [
+        "東京時間の要人発言を監視",
+        "輸出株のオーバーナイト判断に利用"
+      ]
+    },
+    {
+      "id": "wl-crypto-link",
+      "symbol": "LINKUSDT",
+      "name": "Chainlink",
+      "category": "仮想通貨",
+      "priority": "medium",
+      "trigger": "パンプスコア上位維持 + 出来高増加継続",
+      "action_plan": "1h高値更新で短期追随、出来高鈍化とともに撤退",
+      "thesis": "イベントドリブンで資金回転が入りやすく、短期モメンタム監視対象として有効。",
+      "notes": [
+        "低流動性時間帯の深追いは避ける",
+        "BTC急落時は連れ安を優先"
+      ]
+    }
+  ]
+}

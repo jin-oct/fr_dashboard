@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MARKET INTELLIGENCE</title>
+  <meta name="description" content="実ニュースと実価格を集約した静的マーケットダッシュボード。">
+  <link rel="stylesheet" href="./assets/style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="hero">
+      <div class="hero-kicker"><span class="dot"></span> MARKET INTELLIGENCE</div>
+      <h1 class="hero-title">MARKET INTELLIGENCE</h1>
+      <p class="hero-updated" id="updatedAtLine">最終更新 --</p>
+      <div class="hero-version">v4.2</div>
+    </header>
+
+    <nav class="tabs" id="tabs" aria-label="dashboard tabs"></nav>
+
+    <main id="views">
+      <section class="panel is-active" data-tab="summary">
+        <section class="risk-card" id="riskCard"></section>
+
+        <section class="brief-card" id="globalSummary"></section>
+
+        <section class="pair-strip" id="pairStrip"></section>
+
+        <section class="quote-panel">
+          <div class="section-title">USD/JPY</div>
+          <div class="quote-main" id="summaryQuote"></div>
+        </section>
+
+        <section class="solid-panel">
+          <div class="section-header">
+            <div>
+              <div class="section-title">MARKET MOVERS</div>
+              <div class="section-subtitle">市場全体に影響が大きいニュース</div>
+            </div>
+          </div>
+          <div id="newsList" class="news-list"></div>
+        </section>
+
+        <section class="today-note" id="todayNote"></section>
+      </section>
+
+      <section class="panel" data-tab="jp_stock">
+        <section class="category-hero">
+          <div class="section-title">JP STOCK</div>
+          <h2>日本株</h2>
+          <p>国内株に特化したニュースと価格モニター</p>
+        </section>
+        <section class="solid-panel">
+          <div class="section-header">
+            <div>
+              <div class="section-title">HEADLINES</div>
+              <div class="section-subtitle">日本株に特化したニュース</div>
+            </div>
+          </div>
+          <div id="jpStockNews" class="news-list"></div>
+        </section>
+        <section class="solid-panel market-section">
+          <div class="section-header">
+            <div>
+              <div class="section-title">PRICE MONITOR</div>
+              <div class="section-subtitle">90日推移</div>
+            </div>
+          </div>
+          <div class="market-grid" id="jpStockGrid"></div>
+        </section>
+      </section>
+
+      <section class="panel" data-tab="us_stock">
+        <section class="category-hero">
+          <div class="section-title">US STOCK</div>
+          <h2>米国株</h2>
+          <p>米国指数と大型株の材料を集約</p>
+        </section>
+        <section class="solid-panel">
+          <div class="section-header">
+            <div>
+              <div class="section-title">HEADLINES</div>
+              <div class="section-subtitle">米国株に特化したニュース</div>
+            </div>
+          </div>
+          <div id="usStockNews" class="news-list"></div>
+        </section>
+        <section class="solid-panel market-section">
+          <div class="section-header">
+            <div>
+              <div class="section-title">PRICE MONITOR</div>
+              <div class="section-subtitle">90日推移</div>
+            </div>
+          </div>
+          <div class="market-grid" id="usStockGrid"></div>
+        </section>
+      </section>
+
+      <section class="panel" data-tab="fx">
+        <section class="category-hero">
+          <div class="section-title">FX</div>
+          <h2>為替</h2>
+          <p>ドル円中心の方向感と材料を整理</p>
+        </section>
+        <section class="solid-panel">
+          <div class="section-header">
+            <div>
+              <div class="section-title">HEADLINES</div>
+              <div class="section-subtitle">為替に特化したニュース</div>
+            </div>
+          </div>
+          <div id="fxNews" class="news-list"></div>
+        </section>
+        <section class="solid-panel market-section">
+          <div class="section-header">
+            <div>
+              <div class="section-title">PRICE MONITOR</div>
+              <div class="section-subtitle">主要通貨ペア</div>
+            </div>
+          </div>
+          <div class="market-grid" id="fxGrid"></div>
+        </section>
+      </section>
+
+      <section class="panel" data-tab="crypto">
+        <section class="category-hero">
+          <div class="section-title">CRYPTO</div>
+          <h2>仮想通貨</h2>
+          <p>主要ニュースとパンプ検知を表示</p>
+        </section>
+        <section class="solid-panel pump-panel">
+          <div class="section-header">
+            <div>
+              <div class="section-title">PUMP DETECTOR</div>
+              <div class="section-subtitle">1h*0.5 + 24h*0.3 + volume*0.2</div>
+            </div>
+          </div>
+          <div id="pumpList" class="pump-list"></div>
+        </section>
+        <section class="solid-panel">
+          <div class="section-header">
+            <div>
+              <div class="section-title">HEADLINES</div>
+              <div class="section-subtitle">仮想通貨に特化したニュース</div>
+            </div>
+          </div>
+          <div id="cryptoNews" class="news-list"></div>
+        </section>
+        <section class="solid-panel market-section">
+          <div class="section-header">
+            <div>
+              <div class="section-title">PRICE MONITOR</div>
+              <div class="section-subtitle">主要銘柄</div>
+            </div>
+          </div>
+          <div class="market-grid" id="cryptoGrid"></div>
+        </section>
+      </section>
+
+      <section class="panel" data-tab="bond">
+        <section class="category-hero">
+          <div class="section-title">BOND</div>
+          <h2>債券</h2>
+          <p>金利とマクロ材料の監視用</p>
+        </section>
+        <section class="solid-panel">
+          <div class="section-header">
+            <div>
+              <div class="section-title">HEADLINES</div>
+              <div class="section-subtitle">債券に特化したニュース</div>
+            </div>
+          </div>
+          <div id="bondNews" class="news-list"></div>
+        </section>
+        <section class="solid-panel market-section">
+          <div class="section-header">
+            <div>
+              <div class="section-title">PRICE MONITOR</div>
+              <div class="section-subtitle">利回り推移</div>
+            </div>
+          </div>
+          <div class="market-grid" id="bondGrid"></div>
+        </section>
+      </section>
+
+      <section class="panel" data-tab="watchlist">
+        <section class="category-hero">
+          <div class="section-title">WATCHLIST</div>
+          <h2>ウォッチリスト</h2>
+          <p>将来的に編集可能な構造</p>
+        </section>
+        <div class="watchlist-grid" id="watchlistGrid"></div>
+      </section>
+    </main>
+  </div>
+
+  <template id="marketCardTemplate">
+    <article class="market-card">
+      <div class="market-card-head">
+        <div>
+          <div class="market-symbol"></div>
+          <h3 class="market-name"></h3>
+        </div>
+        <div class="market-change"></div>
+      </div>
+      <div class="market-price"></div>
+      <div class="market-range"></div>
+      <div class="market-spark"></div>
+      <div class="market-meta"></div>
+    </article>
+  </template>
+
+  <script src="./assets/app.js"></script>
+</body>
+</html>

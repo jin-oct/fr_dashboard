@@ -1,0 +1,828 @@
+{
+  "updated_at": "2026-04-24 01:48 JST",
+  "market_overview": {
+    "risk_mode": "Risk Off 寄りの中立",
+    "macro_tone": "欧州為替：ドル・円はじり高、原油相場は小幅高 / 欧州為替：ドル・円は小高い、原油高・ドル高で",
+    "geopolitical_risk": "high",
+    "related_assets": {
+      "oil": "WTI 83.20 (+1.4%)",
+      "vix": "16.80 (+4.1%)",
+      "usdjpy": "154.82 (+0.3%)",
+      "fear_greed": "46 (Fear)"
+    }
+  },
+  "ai_summary": {
+    "global": {
+      "main_theme": "欧州為替：ドル・円はじり高、原油相場は小幅高 / 欧州為替：ドル・円は小高い、原油高・ドル高で",
+      "rise_factors": "DeepSeekニュースが安全な避難所を後押しする中、スイスフラン、日本円が上昇 / FTXエステートは2023年に20万ドルの売却後、カーソル株価値30億ドルを逃す",
+      "fall_factors": "米イラン戦争、両国が船舶拿捕後、ホルムズ海峡を巡る海上のにらみ合いに発展 / Warner Bros Discovery株主、1100億ドルのParamount合併を承認",
+      "risk_on_off": "リスクオフ寄り。高インパクト: 欧州為替：ドル・円はじり高、原油相場は小幅高 / 欧州為替：ドル・円は小高い、原油高・ドル高で",
+      "focus_points": "欧州為替：ドル・円はじり高、原油相場は小幅高 / 欧州為替：ドル・円は小高い、原油高・ドル高で / 欧米為替見通し: ドル・円は伸び悩みか、原油高・ドル高も160円台にらみ円売り後退",
+      "jp_swing_hint": "寄り前ニュースの方向とUSDJPYを必ず確認し、指数寄与の大きい銘柄から優先判断します。"
+    },
+    "categories": {
+      "jp_stock": {
+        "label": "日本株",
+        "main_theme": "東証グロ－ス指数は大幅続落、原油価格高止まりなど警戒 / 2025年度の倒産件数は4年連続で増加、今後も増加傾向か 東京商工リサーチ",
+        "rise_factors": "好材料は限定的です。",
+        "fall_factors": "大きな悪材料は限定的です。",
+        "risk_on_off": "リスクオフ寄り。高インパクト: 東証グロ－ス指数は大幅続落、原油価格高止まりなど警戒 / 2025年度の倒産件数は4年連続で増加、今後も増加傾向か 東京商工リサーチ",
+        "focus_points": "東証グロ－ス指数は大幅続落、原油価格高止まりなど警戒 / 2025年度の倒産件数は4年連続で増加、今後も増加傾向か 東京商工リサーチ / 日銀据え置きでも正常化継続 1%視野と家計・企業への影響",
+        "jp_swing_hint": "寄り前ニュースの方向とUSDJPYを必ず確認し、指数寄与の大きい銘柄から優先判断します。"
+      },
+      "us_stock": {
+        "label": "米国株",
+        "main_theme": "Warner Bros Discovery株主がパラマウント合併を承認 / ServiceNowの株価は史上最悪の日に向かって下落し、ソフトウェア部門も崩壊する",
+        "rise_factors": "好材料は限定的です。",
+        "fall_factors": "Warner Bros Discovery株主がパラマウント合併を承認 / ServiceNowの株価は史上最悪の日に向かって下落し、ソフトウェア部門も崩壊する",
+        "risk_on_off": "リスクオフ寄り。高インパクト: Warner Bros Discovery株主がパラマウント合併を承認 / ServiceNowの株価は史上最悪の日に向かって下落し、ソフトウェア部門も崩壊する",
+        "focus_points": "Warner Bros Discovery株主がパラマウント合併を承認 / ServiceNowの株価は史上最悪の日に向かって下落し、ソフトウェア部門も崩壊する / トランプ政権は研究を拡大する可能性のある大きな転換で大麻の再分類に動く",
+        "jp_swing_hint": "寄り前ニュースの方向とUSDJPYを必ず確認し、指数寄与の大きい銘柄から優先判断します。"
+      },
+      "fx": {
+        "label": "為替",
+        "main_theme": "欧州為替：ドル・円はじり高、原油相場は小幅高 / 欧州為替：ドル・円は小高い、原油高・ドル高で",
+        "rise_factors": "DeepSeekニュースが安全な避難所を後押しする中、スイスフラン、日本円が上昇",
+        "fall_factors": "米イラン戦争、両国が船舶拿捕後、ホルムズ海峡を巡る海上のにらみ合いに発展 / Warner Bros Discovery株主、1100億ドルのParamount合併を承認",
+        "risk_on_off": "リスクオフ寄り。高インパクト: 欧州為替：ドル・円はじり高、原油相場は小幅高 / 欧州為替：ドル・円は小高い、原油高・ドル高で",
+        "focus_points": "欧州為替：ドル・円はじり高、原油相場は小幅高 / 欧州為替：ドル・円は小高い、原油高・ドル高で / 欧米為替見通し: ドル・円は伸び悩みか、原油高・ドル高も160円台にらみ円売り後退",
+        "jp_swing_hint": "寄り前ニュースの方向とUSDJPYを必ず確認し、指数寄与の大きい銘柄から優先判断します。"
+      },
+      "crypto": {
+        "label": "仮想通貨",
+        "main_theme": "FTXエステートは2023年に20万ドルの売却後、カーソル株価値30億ドルを逃す",
+        "rise_factors": "FTXエステートは2023年に20万ドルの売却後、カーソル株価値30億ドルを逃す",
+        "fall_factors": "大きな悪材料は限定的です。",
+        "risk_on_off": "リスクオン。高インパクト: 限定的",
+        "focus_points": "FTXエステートは2023年に20万ドルの売却後、カーソル株価値30億ドルを逃す",
+        "jp_swing_hint": "寄り前ニュースの方向とUSDJPYを必ず確認し、指数寄与の大きい銘柄から優先判断します。"
+      },
+      "bond": {
+        "label": "債券",
+        "main_theme": "金利差縮小にもかかわらずドル円は狭いレンジを維持するとアナリストが予想 / 最新のインフレ統計があなたに与える 3 つの影響",
+        "rise_factors": "好材料は限定的です。",
+        "fall_factors": "最新のインフレ統計があなたに与える 3 つの影響 / イラン戦争で燃料価格が高騰、英国のインフレ率が上昇",
+        "risk_on_off": "リスクオフ寄り。高インパクト: 金利差縮小にもかかわらずドル円は狭いレンジを維持するとアナリストが予想 / 最新のインフレ統計があなたに与える 3 つの影響",
+        "focus_points": "金利差縮小にもかかわらずドル円は狭いレンジを維持するとアナリストが予想 / 最新のインフレ統計があなたに与える 3 つの影響 / イラン戦争で燃料価格が高騰、英国のインフレ率が上昇",
+        "jp_swing_hint": "寄り前ニュースの方向とUSDJPYを必ず確認し、指数寄与の大きい銘柄から優先判断します。"
+      }
+    }
+  },
+  "news": [
+    {
+      "title": "欧州為替：ドル・円はじり高、原油相場は小幅高",
+      "summary": "欧州市場でドル・円はじり高となり、159円76銭までやや値を上げた。",
+      "sentiment": "neutral",
+      "impact": "high",
+      "source": "zaikei.co.jp",
+      "link": "https://www.zaikei.co.jp/article/20260423/851585.html",
+      "published_at": "2026-04-23 19:17 JST",
+      "tags": [
+        "macro",
+        "scope_macro"
+      ],
+      "risk_level": "low",
+      "related_assets": [
+        "USDJPY"
+      ],
+      "category": "fx",
+      "locale": "jp",
+      "scope": "macro",
+      "significance_score": 180,
+      "fx_bias": "円安要因"
+    },
+    {
+      "title": "欧州為替：ドル・円は小高い、原油高・ドル高で",
+      "summary": "欧州市場でドル・円は小高く推移し、159円58銭から159円74銭まで小幅に値を上げた。",
+      "sentiment": "neutral",
+      "impact": "high",
+      "source": "zaikei.co.jp",
+      "link": "https://www.zaikei.co.jp/article/20260423/851580.html",
+      "published_at": "2026-04-23 18:33 JST",
+      "tags": [
+        "macro",
+        "scope_macro"
+      ],
+      "risk_level": "low",
+      "related_assets": [
+        "USDJPY"
+      ],
+      "category": "fx",
+      "locale": "jp",
+      "scope": "macro",
+      "significance_score": 180,
+      "fx_bias": "円安要因"
+    },
+    {
+      "title": "東証グロ－ス指数は大幅続落、原油価格高止まりなど警戒",
+      "summary": "東証グロース市場指数 1005.73 -28.33／出来高 4億5149万株／売買代金 2350億円東証グロース市場250指数 777.87 -23.95／出来高 1億8855万株／売買代金 1765億円。",
+      "sentiment": "neutral",
+      "impact": "high",
+      "source": "zaikei.co.jp",
+      "link": "https://www.zaikei.co.jp/article/20260423/851574.html",
+      "published_at": "2026-04-23 16:53 JST",
+      "tags": [
+        "macro",
+        "scope_macro"
+      ],
+      "risk_level": "low",
+      "related_assets": [
+        "USDJPY"
+      ],
+      "category": "jp_stock",
+      "locale": "jp",
+      "scope": "macro",
+      "significance_score": 170
+    },
+    {
+      "title": "金利差縮小にもかかわらずドル円は狭いレンジを維持するとアナリストが予想",
+      "summary": "金利差縮小にもかかわらずドル円は狭いレンジを維持するとアナリストが予想",
+      "sentiment": "neutral",
+      "impact": "high",
+      "source": "jp.investing.com",
+      "link": "https://jp.investing.com/news/forex-news/article-93CH-1501991",
+      "published_at": "2026-04-23 10:15:32",
+      "tags": [
+        "macro",
+        "scope_macro"
+      ],
+      "risk_level": "low",
+      "related_assets": [
+        "USDJPY"
+      ],
+      "category": "bond",
+      "locale": "jp",
+      "scope": "macro",
+      "significance_score": 170
+    },
+    {
+      "title": "2025年度の倒産件数は4年連続で増加、今後も増加傾向か 東京商工リサーチ",
+      "summary": "東京商工リサーチが2025年3月の「全国企業倒産」を発表。人手不足、コスト増、金利上昇に加えて、中東情勢の悪化により、今後も倒産が増える可能性が高いとしている。",
+      "sentiment": "neutral",
+      "impact": "high",
+      "source": "zaikei.co.jp",
+      "link": "https://www.zaikei.co.jp/article/20260411/850022.html",
+      "published_at": "2026-04-11 11:53 JST",
+      "tags": [
+        "macro",
+        "scope_macro"
+      ],
+      "risk_level": "low",
+      "related_assets": [
+        "USDJPY"
+      ],
+      "category": "jp_stock",
+      "locale": "jp",
+      "scope": "macro",
+      "significance_score": 170
+    }
+  ],
+  "category_news": {
+    "jp_stock": [
+      {
+        "title": "日銀据え置きでも正常化継続 1%視野と家計・企業への影響",
+        "summary": "今回のニュースのポイント: ・現状維持の裏にある姿勢: 政策金利は0.75%で据え置き。",
+        "sentiment": "neutral",
+        "impact": "high",
+        "source": "zaikei.co.jp",
+        "link": "https://www.zaikei.co.jp/article/20260320/847719.html",
+        "published_at": "2026-03-20 16:24 JST",
+        "tags": [
+          "macro",
+          "scope_macro"
+        ],
+        "risk_level": "low",
+        "related_assets": [
+          "USDJPY"
+        ],
+        "category": "jp_stock",
+        "locale": "jp",
+        "scope": "macro",
+        "significance_score": 170
+      },
+      {
+        "title": "インフレとは何か お金の価値が目減りする時代の生存戦略",
+        "summary": "今回のニュースのポイント ・通貨の購買力の低下:インフレとは、幅広いモノやサービスの価格水準が一定期間にわたり上昇し、その結果として通貨の購買力が低下していく状態を指します。",
+        "sentiment": "neutral",
+        "impact": "medium",
+        "source": "zaikei.co.jp",
+        "link": "https://www.zaikei.co.jp/article/20260326/848422.html",
+        "published_at": "2026-03-26 17:16 JST",
+        "tags": [
+          "macro",
+          "scope_macro"
+        ],
+        "risk_level": "low",
+        "related_assets": [
+          "USDJPY"
+        ],
+        "category": "jp_stock",
+        "locale": "jp",
+        "scope": "macro",
+        "significance_score": 170
+      },
+      {
+        "title": "CPI上昇率1.3%に鈍化も、食料・サービスは2.5%高 家計負担の“中身”を解剖",
+        "summary": "今回のニュースのポイント: ・物価は「上昇継続も、伸びは鈍化」: 2026年2月の全国消費者物価指数(CPI)総合は前年同月比1.3%上昇となり、上昇幅は前月の1.5%からさらに縮小した 。",
+        "sentiment": "neutral",
+        "impact": "medium",
+        "source": "zaikei.co.jp",
+        "link": "https://www.zaikei.co.jp/article/20260324/848026.html",
+        "published_at": "2026-03-24 12:50 JST",
+        "tags": [
+          "macro",
+          "scope_macro"
+        ],
+        "risk_level": "low",
+        "related_assets": [
+          "USDJPY"
+        ],
+        "category": "jp_stock",
+        "locale": "jp",
+        "scope": "macro",
+        "significance_score": 145
+      },
+      {
+        "title": "賃上げは誰が決める?「春闘」の仕組みと日銀政策を動かす“相場”の正体",
+        "summary": "今回のニュースのポイント ・現場の積み上げで決まる「分散型」: 日本の賃金は政府が一方的に決めるものではなく、企業ごとの労使交渉の積み上げで決まる。",
+        "sentiment": "neutral",
+        "impact": "medium",
+        "source": "zaikei.co.jp",
+        "link": "https://www.zaikei.co.jp/article/20260323/847864.html",
+        "published_at": "2026-03-23 13:42 JST",
+        "tags": [
+          "macro",
+          "scope_macro"
+        ],
+        "risk_level": "low",
+        "related_assets": [
+          "USDJPY"
+        ],
+        "category": "jp_stock",
+        "locale": "jp",
+        "scope": "macro",
+        "significance_score": 145
+      },
+      {
+        "title": "23日の香港市場概況：ハンセン指数は続落、米イラン交渉の先行き不透明感が足かせ",
+        "summary": "23日の香港市場は続落。主要90銘柄で構成されるハンセン指数が前日比248.04ポイント（0.95％）安の25915.20ポイント、本土企業株で構成される中国本土株指数（旧H株指数）が69.15ポイント（0.79％）安の8732.63ポイントと続落した。",
+        "sentiment": "neutral",
+        "impact": "medium",
+        "source": "zaikei.co.jp",
+        "link": "https://www.zaikei.co.jp/article/20260423/851584.html",
+        "published_at": "2026-04-23 19:06 JST",
+        "tags": [
+          "macro",
+          "scope_benchmark"
+        ],
+        "risk_level": "low",
+        "related_assets": [
+          "USDJPY"
+        ],
+        "category": "jp_stock",
+        "locale": "jp",
+        "scope": "benchmark",
+        "significance_score": 120
+      },
+      {
+        "title": "23日の中国本土市場概況：上海総合は4日ぶり反落、中東情勢の緊迫化で売りやや優勢",
+        "summary": "23日の中国本土マーケットは、主要指標の上海総合指数が前日比13.01ポイント（0.32％）安の4093.25ポイントと4日ぶりに反落した。",
+        "sentiment": "neutral",
+        "impact": "medium",
+        "source": "zaikei.co.jp",
+        "link": "https://www.zaikei.co.jp/article/20260423/851583.html",
+        "published_at": "2026-04-23 19:01 JST",
+        "tags": [
+          "macro",
+          "scope_benchmark"
+        ],
+        "risk_level": "low",
+        "related_assets": [
+          "USDJPY"
+        ],
+        "category": "jp_stock",
+        "locale": "jp",
+        "scope": "benchmark",
+        "significance_score": 120
+      }
+    ],
+    "us_stock": [
+      {
+        "title": "Warner Bros Discovery株主がパラマウント合併を承認",
+        "summary": "Warner Bros Discovery株主がパラマウント合併を承認",
+        "sentiment": "negative",
+        "impact": "high",
+        "source": "jp.investing.com",
+        "link": "https://jp.investing.com/news/stock-market-news/article-93CH-1503001",
+        "published_at": "2026-04-23 16:26:21",
+        "tags": [
+          "geopolitics",
+          "oil",
+          "volatility",
+          "scope_macro"
+        ],
+        "risk_level": "high",
+        "related_assets": [
+          "原油",
+          "VIX",
+          "USDJPY"
+        ],
+        "category": "us_stock",
+        "locale": "jp",
+        "scope": "macro",
+        "significance_score": 160
+      },
+      {
+        "title": "Oracle Financial Software株、モルガン・スタンレーがマージンと資金調達に関する疑問は未解決と指摘",
+        "summary": "Oracle Financial Software株、モルガン・スタンレーがマージンと資金調達に関する疑問は未解決と指摘",
+        "sentiment": "negative",
+        "impact": "high",
+        "source": "jp.investing.com",
+        "link": "https://jp.investing.com/news/stock-market-news/article-1502816",
+        "published_at": "2026-04-23 14:56:01",
+        "tags": [
+          "geopolitics",
+          "oil",
+          "volatility",
+          "scope_macro"
+        ],
+        "risk_level": "high",
+        "related_assets": [
+          "原油",
+          "VIX",
+          "USDJPY"
+        ],
+        "category": "us_stock",
+        "locale": "jp",
+        "scope": "macro",
+        "significance_score": 155
+      },
+      {
+        "title": "ServiceNowの株価は史上最悪の日に向かって下落し、ソフトウェア部門も崩壊する",
+        "summary": "著名なソフトウェアETFが1日当たりの下落率としては1年ぶりとなった。あるアナリストは、この分野には「微妙なニュアンスが入り込む余地はない」と言う。",
+        "sentiment": "negative",
+        "impact": "high",
+        "source": "feeds.marketwatch.com",
+        "link": "https://www.marketwatch.com/story/servicenows-stock-sinks-toward-worst-day-ever-taking-the-software-sector-down-with-it-77fd240d?mod=mw_rss_topstories",
+        "published_at": "2026-04-24 00:22 JST",
+        "tags": [
+          "geopolitics",
+          "oil",
+          "volatility",
+          "scope_macro"
+        ],
+        "risk_level": "high",
+        "related_assets": [
+          "原油",
+          "VIX",
+          "USDJPY"
+        ],
+        "category": "us_stock",
+        "locale": "en",
+        "scope": "macro",
+        "significance_score": 155
+      },
+      {
+        "title": "トランプ政権は研究を拡大する可能性のある大きな転換で大麻の再分類に動く",
+        "summary": "トランプ政権はマリファナをスケジュールIIIに再分類し、研究の障壁を緩和するが、薬物の合法化や現在の連邦罰則の変更は行わない。",
+        "sentiment": "negative",
+        "impact": "high",
+        "source": "www.cnbc.com",
+        "link": "https://www.cnbc.com/2026/04/23/trump-administration-reclassifies-cannabis.html",
+        "published_at": "2026-04-24 00:59 JST",
+        "tags": [
+          "rates",
+          "equity",
+          "scope_macro"
+        ],
+        "risk_level": "medium",
+        "related_assets": [
+          "US10Y",
+          "Nasdaq",
+          "USDJPY"
+        ],
+        "category": "us_stock",
+        "locale": "en",
+        "scope": "macro",
+        "significance_score": 145
+      },
+      {
+        "title": "建築資材販売業者 QXO がビーコンへの敵対的入札を開始",
+        "summary": "QXOは何度か断られた後、株主に直接申し出を行っている。",
+        "sentiment": "negative",
+        "impact": "high",
+        "source": "feeds.a.dj.com",
+        "link": "https://www.wsj.com/articles/building-products-distributor-qxo-launching-hostile-bid-for-beacon-de024410?mod=rss_markets_main",
+        "published_at": "2025-01-27 22:28 JST",
+        "tags": [
+          "rates",
+          "equity",
+          "scope_macro"
+        ],
+        "risk_level": "medium",
+        "related_assets": [
+          "US10Y",
+          "Nasdaq",
+          "USDJPY"
+        ],
+        "category": "us_stock",
+        "locale": "en",
+        "scope": "macro",
+        "significance_score": 145
+      },
+      {
+        "title": "Lakewood-Amedex、ティッカーシンボルLABTでNASDAQにおける取引を開始",
+        "summary": "Lakewood-Amedex、ティッカーシンボルLABTでNASDAQにおける取引を開始",
+        "sentiment": "neutral",
+        "impact": "medium",
+        "source": "jp.investing.com",
+        "link": "https://jp.investing.com/news/stock-market-news/article-432SI-1502794",
+        "published_at": "2026-04-23 14:45:04",
+        "tags": [
+          "macro",
+          "scope_benchmark"
+        ],
+        "risk_level": "low",
+        "related_assets": [
+          "USDJPY"
+        ],
+        "category": "us_stock",
+        "locale": "jp",
+        "scope": "benchmark",
+        "significance_score": 110
+      }
+    ],
+    "fx": [
+      {
+        "title": "欧米為替見通し: ドル・円は伸び悩みか、原油高・ドル高も160円台にらみ円売り後退",
+        "summary": "23日の欧米外為市場では、ドル・円は伸び悩む展開を予想する。",
+        "sentiment": "neutral",
+        "impact": "high",
+        "source": "zaikei.co.jp",
+        "link": "https://www.zaikei.co.jp/article/20260423/851577.html",
+        "published_at": "2026-04-23 17:25 JST",
+        "tags": [
+          "macro",
+          "scope_macro"
+        ],
+        "risk_level": "low",
+        "related_assets": [
+          "USDJPY"
+        ],
+        "category": "fx",
+        "locale": "jp",
+        "scope": "macro",
+        "significance_score": 180,
+        "fx_bias": "円安要因"
+      },
+      {
+        "title": "東京為替：ドル・円は小じっかり、原油相場にらみ",
+        "summary": "23日の東京市場でドル・円は小じっかり。",
+        "sentiment": "neutral",
+        "impact": "high",
+        "source": "zaikei.co.jp",
+        "link": "https://www.zaikei.co.jp/article/20260423/851576.html",
+        "published_at": "2026-04-23 17:15 JST",
+        "tags": [
+          "macro",
+          "scope_macro"
+        ],
+        "risk_level": "low",
+        "related_assets": [
+          "USDJPY"
+        ],
+        "category": "fx",
+        "locale": "jp",
+        "scope": "macro",
+        "significance_score": 180
+      },
+      {
+        "title": "「円安=株高」は本当か 輸出企業の増益と家計を圧迫するインフレの構図",
+        "summary": "今回のニュースのポイント ・為替と株価の相関関係: 日本市場では、特に輸出企業が相場を主導してきた時期には「円安・株高」「円高・株安」の傾向が見られてきた。",
+        "sentiment": "neutral",
+        "impact": "medium",
+        "source": "zaikei.co.jp",
+        "link": "https://www.zaikei.co.jp/article/20260324/848031.html",
+        "published_at": "2026-03-24 12:50 JST",
+        "tags": [
+          "macro",
+          "scope_macro"
+        ],
+        "risk_level": "low",
+        "related_assets": [
+          "USDJPY"
+        ],
+        "category": "fx",
+        "locale": "jp",
+        "scope": "macro",
+        "significance_score": 180,
+        "fx_bias": "円高要因"
+      },
+      {
+        "title": "米イラン戦争、両国が船舶拿捕後、ホルムズ海峡を巡る海上のにらみ合いに発展",
+        "summary": "海峡を通過するタンカーの交通がほぼ停滞したままであるため、ブレント原油は再び1バレル当たり100ドルを超えて上昇した。",
+        "sentiment": "negative",
+        "impact": "high",
+        "source": "www.cnbc.com",
+        "link": "https://www.cnbc.com/2026/04/23/iran-war-strait-hormuz-tanker-traffic-oil.html",
+        "published_at": "2026-04-24 00:37 JST",
+        "tags": [
+          "geopolitics",
+          "oil",
+          "volatility",
+          "scope_macro"
+        ],
+        "risk_level": "high",
+        "related_assets": [
+          "原油",
+          "VIX",
+          "USDJPY"
+        ],
+        "category": "fx",
+        "locale": "en",
+        "scope": "macro",
+        "significance_score": 180
+      },
+      {
+        "title": "Warner Bros Discovery株主、1100億ドルのParamount合併を承認",
+        "summary": "Warner Bros Discovery株主、1100億ドルのParamount合併を承認",
+        "sentiment": "negative",
+        "impact": "high",
+        "source": "jp.investing.com",
+        "link": "https://jp.investing.com/news/stock-market-news/article-93CH-1502991",
+        "published_at": "2026-04-23 16:19:53",
+        "tags": [
+          "geopolitics",
+          "oil",
+          "volatility",
+          "scope_macro"
+        ],
+        "risk_level": "high",
+        "related_assets": [
+          "原油",
+          "VIX",
+          "USDJPY"
+        ],
+        "category": "fx",
+        "locale": "jp",
+        "scope": "macro",
+        "significance_score": 170
+      },
+      {
+        "title": "【市場反応】米4月PMIは予想以上に上昇、ドルまちまち",
+        "summary": "米4月製造業PMI速報値は54.0と、3月52.3から予想以上に上昇し少なくとも23年来で最高となった。",
+        "sentiment": "neutral",
+        "impact": "medium",
+        "source": "zaikei.co.jp",
+        "link": "https://www.zaikei.co.jp/article/20260423/851589.html",
+        "published_at": "2026-04-23 23:32 JST",
+        "tags": [
+          "macro",
+          "scope_macro"
+        ],
+        "risk_level": "low",
+        "related_assets": [
+          "USDJPY"
+        ],
+        "category": "fx",
+        "locale": "jp",
+        "scope": "macro",
+        "significance_score": 155
+      }
+    ],
+    "crypto": [
+      {
+        "title": "FTXエステートは2023年に20万ドルの売却後、カーソル株価値30億ドルを逃す",
+        "summary": "FTX不動産は2023年にカーソル株を20万ドルで売却したが、スペースX関連の評価額急騰により現在は30億ドルの価値があり、破産資産売却についての疑問が生じている。",
+        "sentiment": "positive",
+        "impact": "medium",
+        "source": "cointelegraph.com",
+        "link": "https://cointelegraph.com/news/ftx-estate-misses-3b-cursor-stake-value-200k-sale-2023?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+        "published_at": "2026-04-23 23:33 JST",
+        "tags": [
+          "momentum",
+          "scope_sector"
+        ],
+        "risk_level": "low",
+        "related_assets": [
+          "USDJPY"
+        ],
+        "category": "crypto",
+        "locale": "en",
+        "scope": "sector",
+        "significance_score": 65
+      },
+      {
+        "title": "「マジック：ザ・ギャザリング」プレイヤーは心配する必要はありません。ハスブロ社のハッキングは配達に悪影響を及ぼしていない。",
+        "summary": "ハスブロ社の株価は、玩具メーカーが「マジック：ザ・ギャザリング」の出荷が最近のサイバー攻撃の影響を受けるのではないかとの懸念を払拭しようとしたことを受けて急騰した。",
+        "sentiment": "positive",
+        "impact": "low",
+        "source": "feeds.marketwatch.com",
+        "link": "https://www.marketwatch.com/story/magic-the-gathering-players-shouldnt-worry-the-hasbro-hack-hasnt-hurt-deliveries-ffac1b9e?mod=mw_rss_topstories",
+        "published_at": "2026-04-24 01:05 JST",
+        "tags": [
+          "momentum",
+          "scope_single_name"
+        ],
+        "risk_level": "low",
+        "related_assets": [
+          "USDJPY"
+        ],
+        "category": "crypto",
+        "locale": "en",
+        "scope": "single_name",
+        "significance_score": 35
+      },
+      {
+        "title": "金融サービスのまとめ: マーケットトーク",
+        "summary": "金融サービスを対象とした最新のマーケット トークで、Experian、SoFi テクノロジーなどに関する洞察を得ることができます。",
+        "sentiment": "positive",
+        "impact": "low",
+        "source": "feeds.a.dj.com",
+        "link": "https://www.wsj.com/articles/financial-services-roundup-market-talk-94f52cba?mod=rss_markets_main",
+        "published_at": "2025-01-28 02:27 JST",
+        "tags": [
+          "momentum",
+          "scope_single_name"
+        ],
+        "risk_level": "low",
+        "related_assets": [
+          "USDJPY"
+        ],
+        "category": "crypto",
+        "locale": "en",
+        "scope": "single_name",
+        "significance_score": 35
+      },
+      {
+        "title": "PUSDステーブルコインがADIチェーンに導入され、3兆ドルのイスラム金融市場をターゲットに",
+        "summary": "湾岸通貨を裏付けとしたシャリーア準拠のステーブルコインは、中東の機関決済を目的とした新しいレイヤー2ネットワークに拡張されます。",
+        "sentiment": "negative",
+        "impact": "medium",
+        "source": "cointelegraph.com",
+        "link": "https://cointelegraph.com/news/pusd-stablecoin-deploys-on-adi-chain-targeting-3t-islamic-finance-market?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+        "published_at": "2026-04-24 00:56 JST",
+        "tags": [
+          "geopolitics",
+          "oil",
+          "volatility",
+          "scope_single_name"
+        ],
+        "risk_level": "high",
+        "related_assets": [
+          "原油",
+          "VIX",
+          "USDJPY"
+        ],
+        "category": "crypto",
+        "locale": "en",
+        "scope": "single_name",
+        "significance_score": 25
+      },
+      {
+        "title": "OKX、BitGo取引所外決済で米国の推進を加速",
+        "summary": "OKX は米国の機関向けに BitGo の取引所外決済を統合し、事前資金調達要件を軽減し、ICE 投資後の米国での拡大における重要な一歩を示します。",
+        "sentiment": "negative",
+        "impact": "medium",
+        "source": "cointelegraph.com",
+        "link": "https://cointelegraph.com/news/okx-accelerates-us-push-with-bitgo-off-exchange-settlement?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+        "published_at": "2026-04-23 22:51 JST",
+        "tags": [
+          "rates",
+          "equity",
+          "scope_single_name"
+        ],
+        "risk_level": "medium",
+        "related_assets": [
+          "US10Y",
+          "Nasdaq",
+          "USDJPY"
+        ],
+        "category": "crypto",
+        "locale": "en",
+        "scope": "single_name",
+        "significance_score": 25
+      },
+      {
+        "title": "BTC価格が8万ドルに戻らなかった後、ビットコインの週次終値が注目",
+        "summary": "ビットコインは、毎週のローソク足の終値の間にビットコインの価格変動が回復するための重要なレベルとして、強気市場のサポートバンドをもたらしました。",
+        "sentiment": "positive",
+        "impact": "low",
+        "source": "cointelegraph.com",
+        "link": "https://cointelegraph.com/markets/bitcoin-weekly-close-in-focus-after-btc-price-fails-to-revisit-80k?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+        "published_at": "2026-04-24 00:26 JST",
+        "tags": [
+          "crypto",
+          "rotation",
+          "scope_single_name"
+        ],
+        "risk_level": "low",
+        "related_assets": [
+          "BTC",
+          "ETH",
+          "SOL"
+        ],
+        "category": "crypto",
+        "locale": "en",
+        "scope": "single_name",
+        "significance_score": 25
+      }
+    ],
+    "bond": [
+      {
+        "title": "最新のインフレ統計があなたに与える 3 つの影響",
+        "summary": "インフレはどこまで上昇する可能性があるのでしょうか？そして、それは全国の借り手や貯蓄者にとって何を意味するのでしょうか?",
+        "sentiment": "negative",
+        "impact": "high",
+        "source": "feeds.bbci.co.uk",
+        "link": "https://www.bbc.com/news/articles/c75k002qkzno?at_medium=RSS&at_campaign=rss",
+        "published_at": "2026-04-22 20:39 JST",
+        "tags": [
+          "rates",
+          "equity",
+          "scope_macro"
+        ],
+        "risk_level": "medium",
+        "related_assets": [
+          "US10Y",
+          "Nasdaq",
+          "USDJPY"
+        ],
+        "category": "bond",
+        "locale": "en",
+        "scope": "macro",
+        "significance_score": 170
+      },
+      {
+        "title": "イラン戦争で燃料価格が高騰、英国のインフレ率が上昇",
+        "summary": "この数字は、イラン戦争が英国の生活費に与えた影響を初めて公式に示したものである。",
+        "sentiment": "negative",
+        "impact": "high",
+        "source": "feeds.bbci.co.uk",
+        "link": "https://www.bbc.com/news/articles/cnv8l17r51ro?at_medium=RSS&at_campaign=rss",
+        "published_at": "2026-04-22 17:38 JST",
+        "tags": [
+          "geopolitics",
+          "oil",
+          "volatility",
+          "scope_macro"
+        ],
+        "risk_level": "high",
+        "related_assets": [
+          "原油",
+          "VIX",
+          "USDJPY"
+        ],
+        "category": "bond",
+        "locale": "en",
+        "scope": "macro",
+        "significance_score": 170
+      },
+      {
+        "title": "[JSCC]日本国債（JGB）を活用したデジタル担保管理の実証実験を開始",
+        "summary": "[JSCC]日本国債（JGB）を活用したデジタル担保管理の実証実験を開始",
+        "sentiment": "neutral",
+        "impact": "medium",
+        "source": "www.jpx.co.jp",
+        "link": "https://www.jpx.co.jp/corporate/news/news-releases/0060/20260420-01.html",
+        "published_at": "2026-04-20 15:30 JST",
+        "tags": [
+          "macro",
+          "scope_macro"
+        ],
+        "risk_level": "low",
+        "related_assets": [
+          "USDJPY"
+        ],
+        "category": "bond",
+        "locale": "jp",
+        "scope": "macro",
+        "significance_score": 155
+      },
+      {
+        "title": "住宅ローン金利が少しずつ低下し、住宅購入者に打撃を与えている「ロックイン効果」が少しずつ薄れていく",
+        "summary": "住宅ローン金利は3週連続で低下し、高価格と売り手側が有利な金利を手放すことに消極的であることに悩まされている住宅市場にとっては歓迎すべき兆候だ。",
+        "sentiment": "negative",
+        "impact": "high",
+        "source": "feeds.marketwatch.com",
+        "link": "https://www.marketwatch.com/story/mortgage-rates-inch-lower-and-chip-away-at-the-lock-in-effect-that-has-hurt-home-buyers-f1d27717?mod=mw_rss_topstories",
+        "published_at": "2026-04-24 01:09 JST",
+        "tags": [
+          "rates",
+          "equity",
+          "scope_macro"
+        ],
+        "risk_level": "medium",
+        "related_assets": [
+          "US10Y",
+          "Nasdaq",
+          "USDJPY"
+        ],
+        "category": "bond",
+        "locale": "en",
+        "scope": "macro",
+        "significance_score": 155
+      }
+    ]
+  }
+}
