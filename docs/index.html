@@ -253,7 +253,7 @@
   <script>
     const TARGET_EXCHANGES = ["Bitget", "Hyperliquid", "Hyperliquid(XYZ)", "Aster", "edgeX", "Lighter", "StandX", "Pacifica"];
     const PASSCODE_SHA256 = "0f179fbfd346fdd67b2f7276afcef7e3b617e71e86088ae47bc5cec86d9e5594";
-    const ASSET_LABELS = { gold: "Gold", oil: "Oil", copper: "Copper", platinum: "Platinum", btc: "BTC", eth: "ETH", sol: "SOL", bnb: "BNB", xrp: "XRP", ada: "ADA", doge: "DOGE", ltc: "LTC", bch: "BCH", trx: "TRX", avax: "AVAX", link: "LINK", dot: "DOT", sui: "SUI", ton: "TON", xlm: "XLM", aave: "AAVE", arb: "ARB", crv: "CRV", ena: "ENA", jup: "JUP", near: "NEAR", op: "OP", pepe: "PEPE", tao: "TAO", uni: "UNI", wld: "WLD", xag: "XAG", coin: "COIN", mstr: "MSTR", tsla: "TSLA", nvda: "NVDA", aapl: "AAPL", amzn: "AMZN", meta: "META", googl: "GOOGL", msft: "MSFT", amd: "AMD", nflx: "NFLX", spy: "SPY", qqq: "QQQ" };
+    const ASSET_LABELS = { gold: "Gold", oil: "Oil", copper: "Copper", platinum: "Platinum", btc: "BTC", eth: "ETH", sol: "SOL", bnb: "BNB", xrp: "XRP", ada: "ADA", doge: "DOGE", ltc: "LTC", bch: "BCH", trx: "TRX", avax: "AVAX", link: "LINK", dot: "DOT", sui: "SUI", ton: "TON", xlm: "XLM", lunc: "LUNC", aave: "AAVE", arb: "ARB", crv: "CRV", ena: "ENA", jup: "JUP", near: "NEAR", op: "OP", pepe: "PEPE", tao: "TAO", uni: "UNI", wld: "WLD", xag: "XAG", coin: "COIN", mstr: "MSTR", tsla: "TSLA", nvda: "NVDA", aapl: "AAPL", amzn: "AMZN", meta: "META", googl: "GOOGL", msft: "MSFT", amd: "AMD", nflx: "NFLX", spy: "SPY", qqq: "QQQ" };
     const RANGE_OPTIONS = [
       { label: "24H", days: 1 },
       { label: "7D", days: 7 },
@@ -339,6 +339,14 @@
       if (!Number.isFinite(v)) return "-";
       return `$${formatPrice(v)}`;
     }
+    function normalizedAssetPrice(symbol, assetGroup, price) {
+      if (!Number.isFinite(price)) return price;
+      const raw = String(symbol || "").toUpperCase();
+      if (assetGroup === "lunc" && (raw.includes("KLUNC") || raw.includes("1000LUNC"))) {
+        return price / 1000;
+      }
+      return price;
+    }
     function escapeHtml(value) {
       return String(value)
         .replaceAll("&", "&amp;")
@@ -365,6 +373,7 @@
       if (assetGroup === "sui") return "SUI";
       if (assetGroup === "ton") return "TON";
       if (assetGroup === "xlm") return "XLM";
+      if (assetGroup === "lunc") return "LUNC";
       if (assetGroup === "aave") return "AAVE";
       if (assetGroup === "arb") return "ARB";
       if (assetGroup === "crv") return "CRV";
@@ -471,7 +480,7 @@
       const map = new Map();
       latestPrices()
         .filter((row) => row.assetGroup === state.assetGroup)
-        .forEach((row) => map.set(`${row.exchange}|${canonicalSymbol(row.symbol, row.assetGroup)}`, row));
+        .forEach((row) => map.set(`${row.exchange}|${canonicalSymbol(row.symbol, row.assetGroup)}`, { ...row, price: normalizedAssetPrice(row.symbol, row.assetGroup, row.price) }));
       return map;
     }
 
@@ -529,7 +538,7 @@
           map.set(row.symbol, { key: `price|${row.symbol}`, symbol: row.symbol, color: hashColor(`price|${row.symbol}`), points: [] });
         }
         const series = map.get(row.symbol);
-        series.points.push({ x: row.timestamp, y: row.price });
+        series.points.push({ x: row.timestamp, y: normalizedAssetPrice(row.symbol, row.assetGroup, row.price) });
       });
       return [...map.values()].map((series) => {
         series.points.sort((a, b) => a.x - b.x);
@@ -755,7 +764,7 @@
     }
 
     function renderTabs() {
-      renderButtons(el.assetTabs, ["gold","xag","platinum","copper","oil","btc","eth","sol","bnb","xrp","ada","doge","ltc","bch","trx","avax","link","dot","sui","ton","xlm","aave","arb","crv","ena","jup","near","op","pepe","tao","uni","wld","coin","mstr","tsla","nvda","aapl","amzn","meta","googl","msft","amd","nflx","spy","qqq"], (x) => ASSET_LABELS[x], (x) => state.assetGroup === x, (x) => { state.assetGroup = x; state.pointer = null; render(); });
+      renderButtons(el.assetTabs, ["gold","xag","platinum","copper","oil","btc","eth","sol","bnb","xrp","ada","doge","ltc","bch","trx","avax","link","dot","sui","ton","xlm","lunc","aave","arb","crv","ena","jup","near","op","pepe","tao","uni","wld","coin","mstr","tsla","nvda","aapl","amzn","meta","googl","msft","amd","nflx","spy","qqq"], (x) => ASSET_LABELS[x], (x) => state.assetGroup === x, (x) => { state.assetGroup = x; state.pointer = null; render(); });
       renderButtons(el.rangeTabs, RANGE_OPTIONS, (x) => x.label, (x) => state.rangeDays === x.days, (x) => { state.rangeDays = x.days; state.pointer = null; render(); });
       renderButtons(el.metricTabs, METRIC_OPTIONS, (x) => x.toUpperCase(), (x) => state.metric === x, (x) => { state.metric = x; state.pointer = null; render(); });
     }
