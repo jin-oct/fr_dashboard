@@ -505,7 +505,11 @@
     function visiblePriceRows() {
       ensureDefaults();
       const cutoff = state.rangeDays == null ? -Infinity : Date.now() - state.rangeDays * 24 * 3600 * 1000;
-      return assetPriceRecords().filter((row) => row.timestamp >= cutoff && state.symbolFilter.has(row.symbol));
+      return assetPriceRecords().filter((row) => (
+        row.timestamp >= cutoff
+        && state.symbolFilter.has(row.symbol)
+        && state.exchangeFilter.has(row.sourceExchange || row.exchange)
+      ));
     }
 
     function buildSeries(rows) {
@@ -534,10 +538,12 @@
     function buildPriceSeries(rows) {
       const map = new Map();
       rows.forEach((row) => {
-        if (!map.has(row.symbol)) {
-          map.set(row.symbol, { key: `price|${row.symbol}`, symbol: row.symbol, color: hashColor(`price|${row.symbol}`), points: [] });
+        const exchange = row.sourceExchange || row.exchange || "Unknown";
+        const key = `price|${exchange}|${row.symbol}`;
+        if (!map.has(key)) {
+          map.set(key, { key, exchange, symbol: row.symbol, color: hashColor(key), points: [] });
         }
-        const series = map.get(row.symbol);
+        const series = map.get(key);
         series.points.push({ x: row.timestamp, y: normalizedAssetPrice(row.symbol, row.assetGroup, row.price) });
       });
       return [...map.values()].map((series) => {
@@ -883,13 +889,21 @@
         const seriesPoints = pointSelector(series);
         ctx.strokeStyle = series.color;
         ctx.lineWidth = 2;
-        ctx.beginPath();
-        seriesPoints.forEach((p, index) => {
-          const x = toX(p.x);
-          const y = toY(p.y);
-          if (index === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-        });
-        ctx.stroke();
+        if (seriesPoints.length === 1) {
+          const only = seriesPoints[0];
+          ctx.fillStyle = series.color;
+          ctx.beginPath();
+          ctx.arc(toX(only.x), toY(only.y), 4, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.beginPath();
+          seriesPoints.forEach((p, index) => {
+            const x = toX(p.x);
+            const y = toY(p.y);
+            if (index === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+          });
+          ctx.stroke();
+        }
       });
       if (state.pointer) {
         const x = toX(state.pointer.timestamp);
@@ -966,7 +980,7 @@
           if (d < dist) { dist = d; nearestIndex = idx; }
         });
         rows.push({
-          label: `${series.symbol || "Spread"} / ${(series.symbol ? "Price" : state.metric.toUpperCase())} ${formatPrice(series.points[nearestIndex]?.y ?? 0)}`,
+          label: `${series.exchange || "Unknown"} / ${series.symbol || "Spread"} / ${(series.symbol ? "Price" : state.metric.toUpperCase())} ${formatPrice(series.points[nearestIndex]?.y ?? 0)}`,
           sortValue: series.points[nearestIndex]?.y ?? 0,
           timestamp: series.points[nearestIndex]?.x ?? targetTs,
           color: series.color
@@ -1019,7 +1033,7 @@
       el.updated.textContent = state.data.lastUpdated ? `Updated ${formatDateTime(state.data.lastUpdated)}` : "Updated -";
       el.metricTitle.textContent = `${state.metric.toUpperCase()} Chart`;
       el.metricSubtitle.textContent = `${ASSET_LABELS[state.assetGroup]} / ${state.rangeDays == null ? "ALL" : `${state.rangeDays}D`} / ${state.metric.toUpperCase()}`;
-      el.priceSubtitle.textContent = `${ASSET_LABELS[state.assetGroup]} / ${state.rangeDays == null ? "ALL" : `${state.rangeDays}D`} / Lighter mark price`;
+      el.priceSubtitle.textContent = `${ASSET_LABELS[state.assetGroup]} / ${state.rangeDays == null ? "ALL" : `${state.rangeDays}D`} / selected exchange prices`;
       el.cumSubtitle.textContent = `${ASSET_LABELS[state.assetGroup]} / ${state.rangeDays == null ? "ALL" : `${state.rangeDays}D`}`;
       const spreadSeriesList = buildSpreadSeries(seriesList);
       const spreadPairLabel = spreadSeriesList[0]?.shortLabel ? `${spreadSeriesList[0].shortLabel} short / ${spreadSeriesList[0].longLabel} long` : "pair unavailable";
