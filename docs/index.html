@@ -253,7 +253,8 @@
   <script>
     const TARGET_EXCHANGES = ["Bitget", "Hyperliquid", "Hyperliquid(XYZ)", "Aster", "edgeX", "Lighter", "StandX", "Pacifica"];
     const PASSCODE_SHA256 = "0f179fbfd346fdd67b2f7276afcef7e3b617e71e86088ae47bc5cec86d9e5594";
-    const ASSET_LABELS = { gold: "Gold", oil: "Oil", copper: "Copper", platinum: "Platinum", btc: "BTC", eth: "ETH", sol: "SOL", bnb: "BNB", xrp: "XRP", ada: "ADA", doge: "DOGE", ltc: "LTC", bch: "BCH", trx: "TRX", avax: "AVAX", link: "LINK", dot: "DOT", sui: "SUI", ton: "TON", xlm: "XLM", lunc: "LUNC", aave: "AAVE", arb: "ARB", crv: "CRV", ena: "ENA", jup: "JUP", near: "NEAR", op: "OP", pepe: "PEPE", tao: "TAO", uni: "UNI", wld: "WLD", xag: "XAG", coin: "COIN", mstr: "MSTR", tsla: "TSLA", nvda: "NVDA", aapl: "AAPL", amzn: "AMZN", meta: "META", googl: "GOOGL", msft: "MSFT", amd: "AMD", nflx: "NFLX", spy: "SPY", qqq: "QQQ" };
+    const ASSET_LABELS = {"gold": "Gold", "xag": "XAG", "platinum": "Platinum", "copper": "Copper", "oil": "Oil", "btc": "BTC", "eth": "ETH", "sol": "SOL", "bnb": "BNB", "xrp": "XRP", "ada": "ADA", "doge": "DOGE", "ltc": "LTC", "bch": "BCH", "trx": "TRX", "avax": "AVAX", "link": "LINK", "dot": "DOT", "sui": "SUI", "ton": "TON", "xlm": "XLM", "lunc": "LUNC", "aave": "AAVE", "arb": "ARB", "crv": "CRV", "ena": "ENA", "jup": "JUP", "near": "NEAR", "op": "OP", "pepe": "PEPE", "tao": "TAO", "uni": "UNI", "wld": "WLD", "coin": "COIN", "mstr": "MSTR", "tsla": "TSLA", "nvda": "NVDA", "aapl": "AAPL", "amzn": "AMZN", "meta": "META", "googl": "GOOGL", "msft": "MSFT", "amd": "AMD", "nflx": "NFLX", "spy": "SPY", "qqq": "QQQ", "hood": "HOOD", "intc": "INTC", "baba": "BABA", "arm": "ARM", "pltr": "PLTR", "orcl": "ORCL", "mrvl": "MRVL", "mu": "MU", "avgo": "AVGO", "tsm": "TSM", "xom": "XOM", "tqqq": "TQQQ", "sqqq": "SQQQ", "cost": "COST", "lly": "LLY", "rklb": "RKLB", "dkng": "DKNG", "gme": "GME", "bx": "BX", "zm": "ZM", "ebay": "EBAY", "asml": "ASML", "avnt": "AVNT", "crcl": "CRCL", "crwv": "CRWV", "dia": "DIA", "ewj": "EWJ", "ewy": "EWY", "ewz": "EWZ", "fogo": "FOGO", "ip": "IP", "lite": "LITE", "robo": "ROBO", "botz": "BOTZ", "mags": "MAGS", "ura": "URA", "urnm": "URNM", "bird": "BIRD", "sndk": "SNDK", "bmnr": "BMNR", "hyundai": "HYUNDAI", "samsung": "SAMSUNG", "skhynix": "SKHYNIX", "softbank": "SOFTBANK", "kioxia": "KIOXIA", "hims": "HIMS", "rivn": "RIVN", "cc": "CC", "hanmi": "HANMI", "iwm": "IWM", "xle": "XLE"};
+    const ASSET_ORDER = ["gold", "xag", "platinum", "copper", "oil", "btc", "eth", "sol", "bnb", "xrp", "ada", "doge", "ltc", "bch", "trx", "avax", "link", "dot", "sui", "ton", "xlm", "lunc", "aave", "arb", "crv", "ena", "jup", "near", "op", "pepe", "tao", "uni", "wld", "coin", "mstr", "tsla", "nvda", "aapl", "amzn", "meta", "googl", "msft", "amd", "nflx", "spy", "qqq", "hood", "intc", "baba", "arm", "pltr", "orcl", "mrvl", "mu", "avgo", "tsm", "xom", "tqqq", "sqqq", "cost", "lly", "rklb", "dkng", "gme", "bx", "zm", "ebay", "asml", "avnt", "crcl", "crwv", "dia", "ewj", "ewy", "ewz", "fogo", "ip", "lite", "robo", "botz", "mags", "ura", "urnm", "bird", "sndk", "bmnr", "hyundai", "samsung", "skhynix", "softbank", "kioxia", "hims", "rivn", "cc", "hanmi", "iwm", "xle"];
     const RANGE_OPTIONS = [
       { label: "24H", days: 1 },
       { label: "7D", days: 7 },
@@ -449,11 +450,13 @@
       const inlineData = getInlineData();
       if (inlineData) {
         state.data = inlineData;
+        if (!ASSET_LABELS[state.assetGroup]) state.assetGroup = ASSET_ORDER[0] || "gold";
         return;
       }
       const res = await fetch("./data.json", { cache: "no-store" });
       if (!res.ok) throw new Error(`data.json load failed: ${res.status}`);
       state.data = await res.json();
+      if (!ASSET_LABELS[state.assetGroup]) state.assetGroup = ASSET_ORDER[0] || "gold";
     }
 
     function records() {
@@ -466,6 +469,10 @@
 
     function latestPrices() {
       return Array.isArray(state.data.latestPrices) ? state.data.latestPrices : [];
+    }
+
+    function assetLatestPrices() {
+      return latestPrices().filter((row) => row.assetGroup === state.assetGroup);
     }
 
     function assetRecords() {
@@ -489,7 +496,10 @@
     }
 
     function ensureDefaults() {
-      const rows = assetRecords();
+      const fundingRows = assetRecords();
+      const priceRows = assetPriceRecords().map((row) => ({ symbol: row.symbol, exchange: row.sourceExchange || row.exchange }));
+      const latestRows = assetLatestPrices().map((row) => ({ symbol: row.symbol, exchange: row.exchange }));
+      const rows = [...fundingRows, ...priceRows, ...latestRows];
       const symbols = uniqueValues(rows, "symbol");
       const exchanges = TARGET_EXCHANGES.filter((name) => rows.some((row) => row.exchange === name));
       if (!state.symbolFilter.size || [...state.symbolFilter].every((v) => !symbols.includes(v))) state.symbolFilter = new Set(symbols);
@@ -770,13 +780,22 @@
     }
 
     function renderTabs() {
-      renderButtons(el.assetTabs, ["gold","xag","platinum","copper","oil","btc","eth","sol","bnb","xrp","ada","doge","ltc","bch","trx","avax","link","dot","sui","ton","xlm","lunc","aave","arb","crv","ena","jup","near","op","pepe","tao","uni","wld","coin","mstr","tsla","nvda","aapl","amzn","meta","googl","msft","amd","nflx","spy","qqq"], (x) => ASSET_LABELS[x], (x) => state.assetGroup === x, (x) => { state.assetGroup = x; state.pointer = null; render(); });
+      const visibleAssetGroups = ASSET_ORDER.filter((assetGroup) => (
+        records().some((row) => row.assetGroup === assetGroup)
+        || priceRecords().some((row) => row.assetGroup === assetGroup)
+        || latestPrices().some((row) => row.assetGroup === assetGroup)
+      ));
+      if (!visibleAssetGroups.includes(state.assetGroup)) state.assetGroup = visibleAssetGroups[0] || ASSET_ORDER[0] || "gold";
+      renderButtons(el.assetTabs, visibleAssetGroups, (x) => ASSET_LABELS[x] || String(x).toUpperCase(), (x) => state.assetGroup === x, (x) => { state.assetGroup = x; state.pointer = null; render(); });
       renderButtons(el.rangeTabs, RANGE_OPTIONS, (x) => x.label, (x) => state.rangeDays === x.days, (x) => { state.rangeDays = x.days; state.pointer = null; render(); });
       renderButtons(el.metricTabs, METRIC_OPTIONS, (x) => x.toUpperCase(), (x) => state.metric === x, (x) => { state.metric = x; state.pointer = null; render(); });
     }
 
     function renderFilters() {
-      const rows = assetRecords();
+      const fundingRows = assetRecords();
+      const priceRows = assetPriceRecords().map((row) => ({ symbol: row.symbol, exchange: row.sourceExchange || row.exchange }));
+      const latestRows = assetLatestPrices().map((row) => ({ symbol: row.symbol, exchange: row.exchange }));
+      const rows = [...fundingRows, ...priceRows, ...latestRows];
       const symbols = uniqueValues(rows, "symbol");
       const exchanges = TARGET_EXCHANGES.filter((name) => rows.some((row) => row.exchange === name));
       renderButtons(el.symbolFilters, symbols, (x) => x, (x) => state.symbolFilter.has(x), (x) => {
