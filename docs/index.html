@@ -563,6 +563,15 @@
       }).sort((a, b) => (b.latest?.y ?? -Infinity) - (a.latest?.y ?? -Infinity));
     }
 
+    function filterPriceRowsFromTimestamp(startTimestamp) {
+      ensureDefaults();
+      return assetPriceRecords().filter((row) => (
+        row.timestamp >= startTimestamp
+        && state.symbolFilter.has(row.symbol)
+        && state.exchangeFilter.has(row.sourceExchange || row.exchange)
+      ));
+    }
+
     function buildSpreadSeries(seriesList) {
       const latestPriceByKey = latestPriceMap();
       const buildPairSeries = (shortSeries, longSeries) => {
@@ -583,6 +592,7 @@
         const basisPenalty = midPrice > 0 ? (Math.abs(shortPrice - longPrice) / midPrice) / 2 : 0;
         let shortEquity = Math.max(0.5 - (shortFeeRate * 0.5) - (basisPenalty * 0.5), 1e-9);
         let longEquity = Math.max(0.5 - (longFeeRate * 0.5) - (basisPenalty * 0.5), 1e-9);
+        let fundingPnl = 0;
         const points = [];
         timestamps.forEach((timestamp) => {
           let shortAdvanced = false;
@@ -598,12 +608,16 @@
           if (shortIdx < 0 || longIdx < 0) return;
           const shortPoint = shortPoints[shortIdx];
           const longPoint = longPoints[longIdx];
-          if (shortAdvanced) shortEquity *= (1 + shortPoint.raw);
-          if (longAdvanced) longEquity *= (1 - longPoint.raw);
+          const shortFundingDelta = shortAdvanced ? shortEquity * shortPoint.raw : 0;
+          const longFundingDelta = longAdvanced ? longEquity * (-longPoint.raw) : 0;
+          if (shortAdvanced) shortEquity += shortFundingDelta;
+          if (longAdvanced) longEquity += longFundingDelta;
+          fundingPnl += shortFundingDelta + longFundingDelta;
           const equity = shortEquity + longEquity;
           points.push({
             x: timestamp,
             y: equity,
+            fundingValue: 1 + fundingPnl,
             spread: shortPoint.metric - longPoint.metric,
             rawSpread: shortPoint.raw - longPoint.raw,
             shortLabel: `${shortSeries.exchange} / ${shortSeries.symbol}`,
@@ -654,7 +668,26 @@
       if (!bestSeries) {
         return [{ key: "spread", color: "#ffb86b", points: [], cumulativePoints: [], latest: null, latestCum: null, shortLabel: "", longLabel: "" }];
       }
-      return [bestSeries];
+      const fundingOverlay = {
+        key: "spread-funding",
+        color: "#79c0ff",
+        exchange: "Funding",
+        symbol: "Realized",
+        points: bestSeries.points.map((point) => ({
+          x: point.x,
+          y: point.fundingValue,
+          spread: point.spread,
+          shortLabel: point.shortLabel,
+          longLabel: point.longLabel,
+          feeReturn: point.feeReturn,
+          basisPenalty: point.basisPenalty,
+        })),
+        latest: bestSeries.points.length ? {
+          x: bestSeries.points[bestSeries.points.length - 1].x,
+          y: bestSeries.points[bestSeries.points.length - 1].fundingValue,
+        } : null,
+      };
+      return [bestSeries, fundingOverlay];
     }
 
     function nearestSpreadPointer(seriesList, canvas, clientX, clientY) {
@@ -680,8 +713,11 @@
         });
         const point = points[nearestIndex];
         if (!point) return;
+        const isFundingOverlay = series.key === "spread-funding";
         rows.push({
-          label: `Value ${formatDollar(point.y)} / Spread ${percent(point.spread)} / Short ${point.shortLabel} / Long ${point.longLabel} / Fee ${percent(point.feeReturn)} / Basis ${percent(point.basisPenalty)}`,
+          label: isFundingOverlay
+            ? `Funding Value ${formatDollar(point.y)} / Short ${point.shortLabel} / Long ${point.longLabel}`
+            : `Value ${formatDollar(point.y)} / Spread ${percent(point.spread)} / Short ${point.shortLabel} / Long ${point.longLabel} / Fee ${percent(point.feeReturn)} / Basis ${percent(point.basisPenalty)}`,
           sortValue: point.y,
           timestamp: point.x,
           color: series.color,
@@ -768,6 +804,36 @@
       return estimates.sort((a, b) => b.netReturn - a.netReturn);
     }
 
+    function percentile(sortedValues, q) {
+      if (!sortedValues.length) return 0;
+      const idx = Math.min(sortedValues.length - 1, Math.max(0, Math.floor((sortedValues.length - 1) * q)));
+      return sortedValues[idx];
+    }
+
+    function computeCopperLeverageStats() {
+      if (state.assetGroup !== "copper") return null;
+      const seriesList = buildPriceSeries(assetPriceRecords());
+      const absReturns = [];
+      seriesList.forEach((series) => {
+        const points = series.points;
+        for (let i = 1; i < points.length; i += 1) {
+          const current = points[i];
+          let j = i - 1;
+          while (j >= 0 && current.x - points[j].x < 20 * 3600 * 1000) j -= 1;
+          if (j < 0) continue;
+          const base = points[j].y;
+          if (!Number.isFinite(base) || base <= 0) continue;
+          absReturns.push(Math.abs((current.y - base) / base));
+        }
+      });
+      if (!absReturns.length) return null;
+      absReturns.sort((a, b) => a - b);
+      const p99 = percentile(absReturns, 0.99);
+      const maxMove = absReturns[absReturns.length - 1];
+      const recommendedLeverage = p99 > 0 ? 0.8 / p99 : 0;
+      return { p99, maxMove, recommendedLeverage };
+    }
+
     function renderButtons(container, items, getLabel, isActive, onClick) {
       container.innerHTML = "";
       items.forEach((item) => {
@@ -816,6 +882,7 @@
       const bottom = ranked[ranked.length - 1];
       const bestCum = seriesList.filter((s) => s.latestCum).slice().sort((a, b) => (b.latestCum?.y ?? -Infinity) - (a.latestCum?.y ?? -Infinity))[0];
       const bestCarry = estimateCarryTrades(seriesList)[0];
+      const copperLeverage = computeCopperLeverageStats();
       const cards = [
         { label: "Visible Series", value: `${seriesList.length}` },
         { label: "Visible Records", value: `${visibleRows().length}` },
@@ -833,7 +900,11 @@
           value: bestCarry
             ? `FR ${percent(bestCarry.fundingReturn)} / Fee ${percent(bestCarry.feeReturn)} / Basis ${percent(bestCarry.basisPenalty)} / ${bestCarry.durationDays.toFixed(1)}D`
             : "-"
-        }
+        },
+        ...(copperLeverage ? [{
+          label: "Copper Safe Lev 24h",
+          value: `${copperLeverage.recommendedLeverage.toFixed(2)}x / p99 ${percent(copperLeverage.p99)} / max ${percent(copperLeverage.maxMove)}`
+        }] : [])
       ];
       el.stats.innerHTML = cards.map((card) => `<div class="stat"><span class="label">${card.label}</span><span class="value">${card.value}</span></div>`).join("");
     }
@@ -1047,14 +1118,19 @@
       renderFilters();
       const rows = visibleRows();
       const seriesList = buildSeries(rows);
-      const priceSeriesList = buildPriceSeries(visiblePriceRows());
+      const spreadSeriesList = buildSpreadSeries(seriesList);
+      const spreadStart = Math.min(...spreadSeriesList.flatMap((series) => series.points.map((point) => point.x)));
+      const priceSeriesList = Number.isFinite(spreadStart)
+        ? buildPriceSeries(filterPriceRowsFromTimestamp(spreadStart))
+        : buildPriceSeries(visiblePriceRows());
       renderStats(seriesList);
       el.updated.textContent = state.data.lastUpdated ? `Updated ${formatDateTime(state.data.lastUpdated)}` : "Updated -";
       el.metricTitle.textContent = `${state.metric.toUpperCase()} Chart`;
       el.metricSubtitle.textContent = `${ASSET_LABELS[state.assetGroup]} / ${state.rangeDays == null ? "ALL" : `${state.rangeDays}D`} / ${state.metric.toUpperCase()}`;
-      el.priceSubtitle.textContent = `${ASSET_LABELS[state.assetGroup]} / ${state.rangeDays == null ? "ALL" : `${state.rangeDays}D`} / selected exchange prices`;
+      el.priceSubtitle.textContent = Number.isFinite(spreadStart)
+        ? `${ASSET_LABELS[state.assetGroup]} / from delta-neutral start / selected exchange prices`
+        : `${ASSET_LABELS[state.assetGroup]} / ${state.rangeDays == null ? "ALL" : `${state.rangeDays}D`} / selected exchange prices`;
       el.cumSubtitle.textContent = `${ASSET_LABELS[state.assetGroup]} / ${state.rangeDays == null ? "ALL" : `${state.rangeDays}D`}`;
-      const spreadSeriesList = buildSpreadSeries(seriesList);
       const spreadPairLabel = spreadSeriesList[0]?.shortLabel ? `${spreadSeriesList[0].shortLabel} short / ${spreadSeriesList[0].longLabel} long` : "pair unavailable";
       el.spreadSubtitle.textContent = `${ASSET_LABELS[state.assetGroup]} / ${state.rangeDays == null ? "ALL" : `${state.rangeDays}D`} / $1 value curve / ${spreadPairLabel}`;
       if (seriesList.length === 0) el.empty.classList.remove("hidden"); else el.empty.classList.add("hidden");
